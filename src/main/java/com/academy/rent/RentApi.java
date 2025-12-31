@@ -3,8 +3,8 @@ package com.academy.rent;
 import com.academy.common.CommonUtil;
 import com.academy.common.CORSFilter;
 import com.academy.rent.service.RentService;
+import com.academy.rent.service.RentVO;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -36,7 +36,9 @@ public class RentApi extends CORSFilter {
      */
     @Operation(summary = "사물함 리스트 조회", description = "사물함 목록을 조회합니다.")
     @GetMapping("/getBoxList")
-    public JSONObject getBoxList(HttpServletRequest request) throws Exception {
+    public JSONObject getBoxList(
+            @ModelAttribute("RentVO") RentVO rentVO,
+            HttpServletRequest request) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
         setParam(params, request);
@@ -58,13 +60,13 @@ public class RentApi extends CORSFilter {
     @Operation(summary = "사물함 상세 번호 리스트 조회", description = "특정 사물함의 상세 번호 목록을 조회합니다.")
     @GetMapping("/getBoxNumList")
     public JSONObject getBoxNumList(
-            @Parameter(description = "사물함 코드", required = true) @RequestParam String boxCd,
+            @ModelAttribute("RentVO") RentVO rentVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
         setParam(params, request);
 
-        params.put("BOX_CD", boxCd);
+        params.put("BOX_CD", rentVO.getBoxCd());
 
         List<HashMap<String, Object>> boxNumList = rentService.boxNumList(params);
 
@@ -80,7 +82,9 @@ public class RentApi extends CORSFilter {
      */
     @Operation(summary = "독서실 리스트 조회", description = "독서실 목록을 조회합니다.")
     @GetMapping("/getRoomList")
-    public JSONObject getRoomList(HttpServletRequest request) throws Exception {
+    public JSONObject getRoomList(
+            @ModelAttribute("RentVO") RentVO rentVO,
+            HttpServletRequest request) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
         setParam(params, request);
@@ -104,13 +108,13 @@ public class RentApi extends CORSFilter {
     @Operation(summary = "독서실 상세 번호 리스트 조회", description = "특정 독서실의 상세 번호 목록을 조회합니다.")
     @GetMapping("/getRoomNumList")
     public JSONObject getRoomNumList(
-            @Parameter(description = "독서실 코드", required = true) @RequestParam String roomCd,
+            @ModelAttribute("RentVO") RentVO rentVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
         setParam(params, request);
 
-        params.put("ROOM_CD", roomCd);
+        params.put("ROOM_CD", rentVO.getRoomCd());
 
         List<HashMap<String, Object>> roomNumList = rentService.roomNumList(params);
 
@@ -127,9 +131,10 @@ public class RentApi extends CORSFilter {
     @Operation(summary = "사물함/독서실 신청", description = "사물함 또는 독서실을 장바구니에 담습니다.")
     @PostMapping("/applyRent")
     public JSONObject applyRent(
-            @RequestBody HashMap<String, String> params,
+            @ModelAttribute("RentVO") RentVO rentVO,
             HttpServletRequest request) throws Exception {
 
+        HashMap<String, String> params = new HashMap<>();
         setParam(params, request);
 
         HashMap<String, Object> jsonObject = new HashMap<>();
@@ -141,7 +146,7 @@ public class RentApi extends CORSFilter {
             return new JSONObject(jsonObject);
         }
 
-        String cmd = params.get("CMD");
+        String cmd = rentVO.getCmd();
         if (cmd == null || cmd.isEmpty()) {
             jsonObject.put("retMsg", "FAIL");
             jsonObject.put("message", "잘못된 접근입니다.");
@@ -151,8 +156,12 @@ public class RentApi extends CORSFilter {
         try {
             if ("box".equals(cmd)) {
                 params.put("KIND_TYPE", "S");
+                params.put("BOX_CD", CommonUtil.isNull(rentVO.getBoxCd(), ""));
+                params.put("BOX_NUM", CommonUtil.isNull(rentVO.getBoxNum(), ""));
             } else if ("room".equals(cmd)) {
                 params.put("KIND_TYPE", "T");
+                params.put("ROOM_CD", CommonUtil.isNull(rentVO.getRoomCd(), ""));
+                params.put("ROOM_NUM", CommonUtil.isNull(rentVO.getRoomNum(), ""));
             }
 
             rentService.aplRentCartInsert(params);
@@ -172,7 +181,9 @@ public class RentApi extends CORSFilter {
      */
     @Operation(summary = "사물함 결제 정보 조회", description = "사물함 결제 정보를 조회합니다.")
     @GetMapping("/getBoxPaymentInfo")
-    public JSONObject getBoxPaymentInfo(HttpServletRequest request) throws Exception {
+    public JSONObject getBoxPaymentInfo(
+            @ModelAttribute("RentVO") RentVO rentVO,
+            HttpServletRequest request) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
         setParam(params, request);
@@ -199,7 +210,9 @@ public class RentApi extends CORSFilter {
      */
     @Operation(summary = "독서실 결제 정보 조회", description = "독서실 결제 정보를 조회합니다.")
     @GetMapping("/getRoomPaymentInfo")
-    public JSONObject getRoomPaymentInfo(HttpServletRequest request) throws Exception {
+    public JSONObject getRoomPaymentInfo(
+            @ModelAttribute("RentVO") RentVO rentVO,
+            HttpServletRequest request) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
         setParam(params, request);

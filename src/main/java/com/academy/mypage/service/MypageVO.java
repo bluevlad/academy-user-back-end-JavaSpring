@@ -67,6 +67,9 @@ public class MypageVO extends CommonVO {
     /** 아이템ID */
     private String itemId;
 
+    /** 관리번호 */
+    private String mgntNo;
+
     // Getters and Setters
     public String getUserId() {
         return userId;
@@ -218,5 +221,13 @@ public class MypageVO extends CommonVO {
 
     public void setItemId(String itemId) {
         this.itemId = itemId;
+    }
+
+    public String getMgntNo() {
+        return mgntNo;
+    }
+
+    public void setMgntNo(String mgntNo) {
+        this.mgntNo = mgntNo;
     }
 }

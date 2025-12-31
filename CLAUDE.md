@@ -142,14 +142,32 @@ All API controllers:
 1. Extend `CORSFilter` for CORS support
 2. Use `@RestController` and `@RequestMapping("/api/<module>")`
 3. Return `JSONObject` (from org.json.simple)
-4. Use Swagger annotations (`@Tag`, `@Operation`, `@Parameter`)
-5. Follow this response structure:
+4. Use Swagger annotations (`@Tag`, `@Operation`)
+5. **Use `@ModelAttribute` with VO for request parameters**
+6. Follow this response structure:
    ```java
    HashMap<String,Object> jsonObject = new HashMap<>();
    jsonObject.put("data", result);
    jsonObject.put("retMsg", "OK"); // or "FAIL"
    return new JSONObject(jsonObject);
    ```
+
+### Request Parameter Convention (using @ModelAttribute with VO)
+
+All API endpoints must use `@ModelAttribute("<Module>VO")` for request parameters:
+
+```java
+@GetMapping("/getList")
+public JSONObject getList(
+        @ModelAttribute("BoardVO") BoardVO boardVO,
+        HttpServletRequest request) throws Exception {
+
+    // Use VO fields directly
+    String searchText = boardVO.getSearchText();
+    int currentPage = boardVO.getCurrentPage();
+    // ...
+}
+```
 
 ## Service Class Conventions
 
@@ -255,12 +273,42 @@ jwt.expiration=3600000
 
 When adding new API endpoints or modules:
 
-1. Create Mapper interface in `com.academy.mapper/<Module>Mapper.java` with `@Mapper`
-2. Create XML mapper in `src/main/resources/mapper/<Module>Mapper.xml`
-3. Create Service in `<module>/service/<Module>Service.java` with `@Service` **implementing `Serializable`**
-4. Create API Controller in `<module>/<Module>Api.java` extending `CORSFilter`
-5. Add Swagger annotations for documentation
-6. Use constructor injection for dependencies
+1. **Create VO class** in `<module>/service/<Module>VO.java` extending `CommonVO`
+2. Create Mapper interface in `com.academy.mapper/<Module>Mapper.java` with `@Mapper`
+3. Create XML mapper in `src/main/resources/mapper/<Module>Mapper.xml`
+4. Create Service in `<module>/service/<Module>Service.java` with `@Service` **implementing `Serializable`**
+5. Create API Controller in `<module>/<Module>Api.java` extending `CORSFilter`
+6. **Use `@ModelAttribute("<Module>VO")` for all request parameters**
+7. Add Swagger annotations for documentation
+8. Use constructor injection for dependencies
+
+### VO Class Convention
+
+All VO classes must:
+1. Extend `CommonVO` (provides pagination fields: currentPage, pageRow, userId)
+2. Implement `Serializable` (inherited from CommonVO)
+3. Include module-specific fields with getters/setters
+4. Be located in `<module>/service/<Module>VO.java`
+
+Example:
+```java
+package com.academy.sample.service;
+
+import com.academy.common.CommonVO;
+
+public class SampleVO extends CommonVO {
+    private static final long serialVersionUID = 1L;
+
+    private String sampleId;
+    private String sampleName;
+    private String searchText;
+
+    // Getters and Setters
+    public String getSampleId() { return sampleId; }
+    public void setSampleId(String sampleId) { this.sampleId = sampleId; }
+    // ...
+}
+```
 
 ## Environment Variables
 
