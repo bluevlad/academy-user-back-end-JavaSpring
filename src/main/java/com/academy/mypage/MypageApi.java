@@ -1,0 +1,370 @@
+package com.academy.mypage;
+
+import com.academy.common.CommonUtil;
+import com.academy.common.CORSFilter;
+import com.academy.mypage.service.MypageService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
+import org.json.simple.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.List;
+
+/**
+ * MypageApi.java
+ * 마이페이지 관련 REST API Controller
+ */
+@Tag(name = "Mypage", description = "마이페이지 관리 API")
+@RestController
+@RequestMapping("/api/mypage")
+public class MypageApi extends CORSFilter {
+
+    private final MypageService mypageService;
+
+    @Autowired
+    public MypageApi(MypageService mypageService) {
+        this.mypageService = mypageService;
+    }
+
+    /**
+     * 내 정보 조회
+     */
+    @Operation(summary = "내 정보 조회", description = "로그인한 사용자의 개인 정보를 조회합니다.")
+    @GetMapping("/getMyInfo")
+    public JSONObject getMyInfo(HttpServletRequest request) throws Exception {
+
+        HashMap<String, String> params = new HashMap<>();
+        setParam(params, request);
+
+        HashMap<String, Object> jsonObject = new HashMap<>();
+
+        String userId = params.get("USER_ID");
+        if (userId == null || userId.isEmpty()) {
+            jsonObject.put("retMsg", "FAIL");
+            jsonObject.put("message", "로그인이 필요합니다.");
+            return new JSONObject(jsonObject);
+        }
+
+        HashMap<String, Object> myInfo = mypageService.getMyInfo(params);
+
+        jsonObject.put("myInfo", myInfo);
+        jsonObject.put("retMsg", "OK");
+
+        return new JSONObject(jsonObject);
+    }
+
+    /**
+     * 내 정보 수정
+     */
+    @Operation(summary = "내 정보 수정", description = "로그인한 사용자의 개인 정보를 수정합니다.")
+    @PostMapping("/updateMyInfo")
+    public JSONObject updateMyInfo(
+            @RequestBody HashMap<String, String> params,
+            HttpServletRequest request) throws Exception {
+
+        setParam(params, request);
+
+        HashMap<String, Object> jsonObject = new HashMap<>();
+
+        String userId = params.get("USER_ID");
+        if (userId == null || userId.isEmpty()) {
+            jsonObject.put("retMsg", "FAIL");
+            jsonObject.put("message", "로그인이 필요합니다.");
+            return new JSONObject(jsonObject);
+        }
+
+        try {
+            params.put("REG_ID", userId);
+            mypageService.infoUpdate(params);
+
+            jsonObject.put("retMsg", "OK");
+            jsonObject.put("message", "정보가 수정되었습니다.");
+        } catch (Exception e) {
+            jsonObject.put("retMsg", "FAIL");
+            jsonObject.put("message", "정보 수정에 실패했습니다.");
+        }
+
+        return new JSONObject(jsonObject);
+    }
+
+    /**
+     * 비밀번호 변경
+     */
+    @Operation(summary = "비밀번호 변경", description = "사용자의 비밀번호를 변경합니다.")
+    @PostMapping("/updatePassword")
+    public JSONObject updatePassword(
+            @RequestBody HashMap<String, String> params,
+            HttpServletRequest request) throws Exception {
+
+        setParam(params, request);
+
+        HashMap<String, Object> jsonObject = new HashMap<>();
+
+        String userId = params.get("USER_ID");
+        if (userId == null || userId.isEmpty()) {
+            jsonObject.put("retMsg", "FAIL");
+            jsonObject.put("message", "로그인이 필요합니다.");
+            return new JSONObject(jsonObject);
+        }
+
+        try {
+            params.put("REG_ID", userId);
+            mypageService.pwdUpdate(params);
+
+            jsonObject.put("retMsg", "OK");
+            jsonObject.put("message", "비밀번호가 변경되었습니다.");
+        } catch (Exception e) {
+            jsonObject.put("retMsg", "FAIL");
+            jsonObject.put("message", "비밀번호 변경에 실패했습니다.");
+        }
+
+        return new JSONObject(jsonObject);
+    }
+
+    /**
+     * 회원 탈퇴
+     */
+    @Operation(summary = "회원 탈퇴", description = "회원 탈퇴를 처리합니다.")
+    @PostMapping("/secession")
+    public JSONObject secession(
+            @RequestBody HashMap<String, String> params,
+            HttpServletRequest request) throws Exception {
+
+        setParam(params, request);
+
+        HashMap<String, Object> jsonObject = new HashMap<>();
+
+        String userId = params.get("USER_ID");
+        if (userId == null || userId.isEmpty()) {
+            jsonObject.put("retMsg", "FAIL");
+            jsonObject.put("message", "로그인이 필요합니다.");
+            return new JSONObject(jsonObject);
+        }
+
+        try {
+            params.put("REG_ID", userId);
+            mypageService.secessionDelete(params);
+
+            // 세션 무효화
+            HttpSession session = request.getSession(false);
+            if (session != null) {
+                session.invalidate();
+            }
+
+            jsonObject.put("retMsg", "OK");
+            jsonObject.put("message", "회원 탈퇴가 완료되었습니다.");
+        } catch (Exception e) {
+            jsonObject.put("retMsg", "FAIL");
+            jsonObject.put("message", "회원 탈퇴에 실패했습니다.");
+        }
+
+        return new JSONObject(jsonObject);
+    }
+
+    /**
+     * 내 학습 정보 조회
+     */
+    @Operation(summary = "내 학습 정보 조회", description = "사용자의 학습 현황 정보를 조회합니다.")
+    @GetMapping("/getMyStudyInfo")
+    public JSONObject getMyStudyInfo(HttpServletRequest request) throws Exception {
+
+        HashMap<String, String> params = new HashMap<>();
+        setParam(params, request);
+
+        HashMap<String, Object> jsonObject = new HashMap<>();
+
+        String userId = params.get("USER_ID");
+        if (userId == null || userId.isEmpty()) {
+            jsonObject.put("retMsg", "FAIL");
+            jsonObject.put("message", "로그인이 필요합니다.");
+            return new JSONObject(jsonObject);
+        }
+
+        HashMap<String, Object> studyInfo = mypageService.myStudyInfo(params);
+
+        jsonObject.put("studyInfo", studyInfo);
+        jsonObject.put("retMsg", "OK");
+
+        return new JSONObject(jsonObject);
+    }
+
+    /**
+     * 월별 학습 현황 조회
+     */
+    @Operation(summary = "월별 학습 현황 조회", description = "사용자의 월별 학습 현황을 조회합니다.")
+    @GetMapping("/getMyStudyForMonth")
+    public JSONObject getMyStudyForMonth(HttpServletRequest request) throws Exception {
+
+        HashMap<String, String> params = new HashMap<>();
+        setParam(params, request);
+
+        HashMap<String, Object> jsonObject = new HashMap<>();
+
+        String userId = params.get("USER_ID");
+        if (userId == null || userId.isEmpty()) {
+            jsonObject.put("retMsg", "FAIL");
+            jsonObject.put("message", "로그인이 필요합니다.");
+            return new JSONObject(jsonObject);
+        }
+
+        List<HashMap<String, Object>> studyList = mypageService.myStudyforMonth(params);
+        List<HashMap<String, Object>> mockList = mypageService.myMockforMonth(params);
+
+        jsonObject.put("studyList", studyList);
+        jsonObject.put("mockList", mockList);
+        jsonObject.put("retMsg", "OK");
+
+        return new JSONObject(jsonObject);
+    }
+
+    /**
+     * 내 강의 리스트 조회
+     */
+    @Operation(summary = "내 강의 리스트 조회", description = "사용자의 수강 강의 목록을 조회합니다.")
+    @GetMapping("/getMyLectureList")
+    public JSONObject getMyLectureList(HttpServletRequest request) throws Exception {
+
+        HashMap<String, String> params = new HashMap<>();
+        setParam(params, request);
+
+        HashMap<String, Object> jsonObject = new HashMap<>();
+
+        String userId = params.get("USER_ID");
+        if (userId == null || userId.isEmpty()) {
+            jsonObject.put("retMsg", "FAIL");
+            jsonObject.put("message", "로그인이 필요합니다.");
+            return new JSONObject(jsonObject);
+        }
+
+        List<HashMap<String, Object>> lectureList = mypageService.myLectureList(params);
+
+        jsonObject.put("lectureList", lectureList);
+        jsonObject.put("retMsg", "OK");
+
+        return new JSONObject(jsonObject);
+    }
+
+    /**
+     * 내 강의 코스 리스트 조회
+     */
+    @Operation(summary = "내 강의 코스 리스트 조회", description = "사용자의 코스별 수강 현황을 조회합니다.")
+    @GetMapping("/getMyLectureCourseList")
+    public JSONObject getMyLectureCourseList(HttpServletRequest request) throws Exception {
+
+        HashMap<String, String> params = new HashMap<>();
+        setParam(params, request);
+
+        HashMap<String, Object> jsonObject = new HashMap<>();
+
+        String userId = params.get("USER_ID");
+        if (userId == null || userId.isEmpty()) {
+            jsonObject.put("retMsg", "FAIL");
+            jsonObject.put("message", "로그인이 필요합니다.");
+            return new JSONObject(jsonObject);
+        }
+
+        List<HashMap<String, Object>> courseList = mypageService.myLectureCourseList(params);
+
+        jsonObject.put("courseList", courseList);
+        jsonObject.put("retMsg", "OK");
+
+        return new JSONObject(jsonObject);
+    }
+
+    /**
+     * 수료증 강의 리스트 조회
+     */
+    @Operation(summary = "수료증 강의 리스트 조회", description = "수료증 발급 가능한 강의 목록을 조회합니다.")
+    @GetMapping("/getMyCertLectureList")
+    public JSONObject getMyCertLectureList(HttpServletRequest request) throws Exception {
+
+        HashMap<String, String> params = new HashMap<>();
+        setParam(params, request);
+
+        HashMap<String, Object> jsonObject = new HashMap<>();
+
+        String userId = params.get("USER_ID");
+        if (userId == null || userId.isEmpty()) {
+            jsonObject.put("retMsg", "FAIL");
+            jsonObject.put("message", "로그인이 필요합니다.");
+            return new JSONObject(jsonObject);
+        }
+
+        List<HashMap<String, Object>> certLectureList = mypageService.myCertLectureList(params);
+
+        jsonObject.put("certLectureList", certLectureList);
+        jsonObject.put("retMsg", "OK");
+
+        return new JSONObject(jsonObject);
+    }
+
+    /**
+     * 수료증 상세 조회
+     */
+    @Operation(summary = "수료증 상세 조회", description = "수료증 상세 정보를 조회합니다.")
+    @GetMapping("/getMyCertDetail")
+    public JSONObject getMyCertDetail(
+            @Parameter(description = "주문번호", required = true) @RequestParam String orderNo,
+            @Parameter(description = "관리번호", required = true) @RequestParam String mgntNo,
+            @Parameter(description = "패키지번호") @RequestParam(required = false) String packageNo,
+            @Parameter(description = "강의번호") @RequestParam(required = false) String lectureNo,
+            HttpServletRequest request) throws Exception {
+
+        HashMap<String, String> params = new HashMap<>();
+        setParam(params, request);
+
+        params.put("ORDERNO", orderNo);
+        params.put("MGNTNO", mgntNo);
+        params.put("PACKAGE_NO", CommonUtil.isNull(packageNo, ""));
+        params.put("LECTURE_NO", CommonUtil.isNull(lectureNo, ""));
+
+        HashMap<String, Object> jsonObject = new HashMap<>();
+
+        String userId = params.get("USER_ID");
+        if (userId == null || userId.isEmpty()) {
+            jsonObject.put("retMsg", "FAIL");
+            jsonObject.put("message", "로그인이 필요합니다.");
+            return new JSONObject(jsonObject);
+        }
+
+        HashMap<String, Object> certDetail;
+        if (packageNo != null && !packageNo.isEmpty()) {
+            certDetail = mypageService.myCertPackageView(params);
+        } else {
+            certDetail = mypageService.myCertLectureView(params);
+        }
+
+        jsonObject.put("certDetail", certDetail);
+        jsonObject.put("retMsg", "OK");
+
+        return new JSONObject(jsonObject);
+    }
+
+    /**
+     * 파라미터 설정
+     */
+    @SuppressWarnings("unchecked")
+    private void setParam(HashMap<String, String> params, HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+
+        if (session == null) {
+            params.put("USER_ID", "");
+        } else {
+            HashMap<String, String> loginInfo = (HashMap<String, String>) session.getAttribute("userInfo");
+            if (loginInfo != null && !loginInfo.isEmpty()) {
+                params.put("USER_ID", loginInfo.get("USER_ID"));
+            } else {
+                params.put("USER_ID", "");
+            }
+        }
+
+        params.put("topMenuType", CommonUtil.isNull(request.getParameter("topMenuType"), "O"));
+        params.put("topMenu", CommonUtil.isNull(request.getParameter("topMenu"), "001"));
+    }
+
+}

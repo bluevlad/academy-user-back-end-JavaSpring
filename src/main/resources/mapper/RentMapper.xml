@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.academy.mapper.RentMapper">
+
+    <!-- 사물함 리스트 조회 -->
+    <select id="boxList" parameterType="hashMap" resultType="hashMap">
+        SELECT BOX_CD, BOX_NM, BOX_COUNT, DEPOSIT, ROW_COUNT, ROW_NUM, UPDATE_DT, UPDATE_ID, START_NUM, END_NUM
+        FROM TB_OFF_BOX
+        ORDER BY BOX_CD ASC
+    </select>
+
+    <!-- 사물함 상세 번호 리스트 조회 -->
+    <select id="boxNumList" parameterType="hashMap" resultType="hashMap">
+        SELECT BOX_CD, BOX_NUM, USERID, USER_NM, BOX_FLAG, UPDATE_DT, UPDATE_ID, RENT_SEQ
+        FROM TB_OFF_BOX_NUM TOBN
+        LEFT OUTER JOIN TB_MA_MEMBER TMM ON TOBN.USERID = TMM.USER_ID
+        WHERE TOBN.BOX_CD = #{BOX_CD}
+        ORDER BY TOBN.BOX_NUM ASC
+    </select>
+
+    <!-- 현재 사용중인 사물함 조회 -->
+    <select id="boxNumChk" parameterType="hashMap" resultType="hashMap">
+        SELECT BOX_CD, BOX_NUM, USERID, BOX_FLAG, UPDATE_DT, RENT_SEQ
+        FROM TB_OFF_BOX_NUM
+        WHERE USERID = #{USER_ID}
+    </select>
+
+    <!-- 독서실 리스트 조회 -->
+    <select id="roomList" parameterType="hashMap" resultType="hashMap">
+        SELECT ROOM_CD, ROOM_NM, ROOM_COUNT, UPDATE_DT, UPDATE_ID, START_NUM, END_NUM
+        FROM TB_OFF_ROOM
+        ORDER BY ROOM_CD ASC
+    </select>
+
+    <!-- 독서실 상세 번호 리스트 조회 -->
+    <select id="roomNumList" parameterType="hashMap" resultType="hashMap">
+        SELECT ROOM_CD, ROOM_NUM, USERID, ROOM_FLAG, UPDATE_DT, UPDATE_ID, RENT_SEQ, RENT_MEMO
+        FROM TB_OFF_ROOM_NUM TOBN
+        LEFT OUTER JOIN TB_MA_MEMBER TMM ON TOBN.USERID = TMM.USER_ID
+        WHERE TOBN.ROOM_CD = #{ROOM_CD}
+        ORDER BY TOBN.ROOM_NUM ASC
+    </select>
+
+    <!-- 현재 사용중인 독서실 조회 -->
+    <select id="roomNumChk" parameterType="hashMap" resultType="hashMap">
+        SELECT ROOM_CD, ROOM_NUM, USERID, ROOM_FLAG, UPDATE_DT, UPDATE_ID, RENT_SEQ, RENT_MEMO
+        FROM TB_OFF_ROOM_NUM
+        WHERE USERID = #{USER_ID}
+    </select>
+
+    <!-- 오프라인 강의 수강 이력 조회 -->
+    <select id="offLearnedChkForRoom" parameterType="hashMap" resultType="hashMap">
+        SELECT * FROM TB_OFF_MYLECTURE
+        WHERE USERID = #{USER_ID}
+    </select>
+
+    <!-- 대여 장바구니 조회 -->
+    <select id="aplRentCartSelect" parameterType="hashMap" resultType="hashMap">
+        SELECT LECCODE, RSC_ID, USER_ID FROM TB_OFF_CC_CART
+        WHERE KIND_TYPE = #{KIND_TYPE}
+        AND USER_ID = #{USER_ID}
+    </select>
+
+    <!-- 대여 장바구니 등록 -->
+    <insert id="aplRentCartInsert" parameterType="hashMap">
+        INSERT INTO TB_OFF_CC_CART(
+            USER_ID
+            , LECCODE
+            , KIND_TYPE
+            , RSC_ID
+            , REGDATE
+        )
+        VALUES(
+            #{USER_ID}
+            , #{LECCODE}
+            , #{KIND_TYPE}
+            , #{RSC_ID}
+            , NOW()
+        )
+    </insert>
+
+    <!-- 대여 장바구니 수정 -->
+    <update id="aplRentCartUpdate" parameterType="hashMap">
+        UPDATE TB_OFF_CC_CART SET
+            LECCODE = #{LECCODE}
+            , RSC_ID = #{RSC_ID}
+            , REGDATE = NOW()
+        WHERE KIND_TYPE = #{KIND_TYPE}
+        AND USER_ID = #{USER_ID}
+    </update>
+
+    <!-- 사물함 결제 정보 조회 -->
+    <select id="boxPayViewSelect" parameterType="hashMap" resultType="hashMap">
+        SELECT A.KIND_TYPE
+            , C.BOX_NM
+            , C.BOX_CD
+            , B.BOX_NUM
+            , DATE_FORMAT(NOW(), '%Y.%m.%d') AS FROM_DT
+            , DATE_FORMAT(DATE_ADD(NOW(), INTERVAL 1 MONTH), '%Y.%m.%d') AS TO_DT
+            , C.DEPOSIT
+        FROM TB_OFF_CC_CART A
+        JOIN TB_OFF_BOX_NUM B ON A.LECCODE = B.BOX_CD AND A.RSC_ID = B.BOX_NUM
+        JOIN TB_OFF_BOX C ON B.BOX_CD = C.BOX_CD
+        WHERE USER_ID = #{USER_ID}
+        AND KIND_TYPE = 'S'
+    </select>
+
+    <!-- 독서실 결제 정보 조회 -->
+    <select id="roomPayViewSelect" parameterType="hashMap" resultType="hashMap">
+        SELECT A.KIND_TYPE
+            , C.ROOM_NM
+            , C.ROOM_CD
+            , B.ROOM_NUM
+            , DATE_FORMAT(NOW(), '%Y.%m.%d') AS FROM_DT
+            , DATE_FORMAT(DATE_ADD(NOW(), INTERVAL 1 MONTH), '%Y.%m.%d') AS TO_DT
+        FROM TB_OFF_CC_CART A
+        JOIN TB_OFF_ROOM_NUM B ON A.LECCODE = B.ROOM_CD AND A.RSC_ID = B.ROOM_NUM
+        JOIN TB_OFF_ROOM C ON B.ROOM_CD = C.ROOM_CD
+        WHERE USER_ID = #{USER_ID}
+        AND KIND_TYPE = 'T'
+    </select>
+
+</mapper>

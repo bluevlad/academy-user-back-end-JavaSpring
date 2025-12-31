@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.academy.mapper.LoginMapper">
+
+    <!-- 로그인 처리 (MariaDB에서는 Oracle DAMO 암호화 대신 일반 비교 사용) -->
+    <select id="login" parameterType="hashMap" resultType="hashMap">
+        SELECT
+            USER_ID,
+            USER_PWD,
+            #{userPwd} AS TEMP_USER_PWD,
+            USER_NM,
+            USER_ROLE,
+            ADMIN_ROLE,
+            EMAIL,
+            PHONE_NO,
+            (SELECT ONOFF_DIV FROM TB_SG_SITE WHERE SITE_ID = ADMIN_ROLE) AS ONOFF_DIV,
+            USER_NICKNM
+        FROM TB_MA_MEMBER
+        WHERE LOWER(USER_ID) = LOWER(#{USER_ID})
+        AND ISUSE = 'Y'
+    </select>
+
+    <!-- 회원 정보 조회 -->
+    <select id="memberInfo" parameterType="hashMap" resultType="hashMap">
+        SELECT USER_ID, USER_PWD
+        FROM TB_MA_MEMBER
+        WHERE LOWER(USER_ID) = LOWER(#{USER_ID})
+        AND ISUSE = 'Y'
+    </select>
+
+    <!-- 회원 ID 중복 체크 -->
+    <select id="memberIdCheck" parameterType="hashMap" resultType="int">
+        SELECT COUNT(USER_ID)
+        FROM TB_MA_MEMBER
+        WHERE USER_ID = #{USER_ID}
+    </select>
+
+    <!-- 휴대폰 번호 중복 체크 -->
+    <select id="phoneNumCheck" parameterType="hashMap" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_MA_MEMBER
+        WHERE PHONE_NO = #{PHONE_NO}
+        <if test='USER_ID != null and USER_ID != ""'>
+            AND USER_ID != #{USER_ID}
+        </if>
+    </select>
+
+    <!-- 카테고리 목록 조회 -->
+    <select id="getCategory" parameterType="hashMap" resultType="hashMap">
+        SELECT
+            ID, CODE, NAME, ISUSE,
+            CASE WHEN ISUSE = 'Y' THEN '활성' ELSE '비활성' END AS ISUSENM,
+            REG_DT, REG_ID, UPD_DT, UPD_ID
+        FROM TB_CATEGORY_INFO
+        WHERE ISUSE = 'Y'
+        AND P_CODE = 'CLASSCODE'
+        ORDER BY CODE ASC
+    </select>
+
+    <!-- 회원 가입 -->
+    <insert id="userInsertProcess" parameterType="hashMap">
+        INSERT INTO TB_MA_MEMBER (
+            USER_ID, USER_NM, SEX, USER_ROLE, USER_PWD,
+            BIRTH_DAY, EMAIL, CATEGORY_CODE, PHONE_NO, TEL_NO,
+            USER_POINT, ZIP_CODE, ADDRESS1, ADDRESS2, IPINDI,
+            ISUSE, REG_DT, UPD_DT, JOIN_CHANNEL, JOB
+            <if test="EXAM_REQ != null and EXAM_REQ != ''">, EXAM_REQ</if>
+            <if test="F_CAT_CD != null and F_CAT_CD != ''">, F_CAT_CD</if>
+            <if test="F_AREA != null and F_AREA != ''">, F_AREA</if>
+            <if test="S_CAT_CD != null and S_CAT_CD != ''">, S_CAT_CD</if>
+            <if test="S_AREA != null and S_AREA != ''">, S_AREA</if>
+            <if test="INFO_REQ != null and INFO_REQ != ''">, INFO_REQ</if>
+            <if test="EVENT_REQ != null and EVENT_REQ != ''">, EVENT_REQ</if>
+            <if test="SBJ_REQ != null and SBJ_REQ != ''">, SBJ_REQ</if>
+            <if test="EVENT_REQ_ETC != null and EVENT_REQ_ETC != ''">, EVENT_REQ_ETC</if>
+            <if test="ISOK_SMS != null and ISOK_SMS != ''">, ISOK_SMS, SMS_DT</if>
+            <if test="ISOK_EMAIL != null and ISOK_EMAIL != ''">, ISOK_EMAIL, EMAIL_DT</if>
+            <if test="REFERRAL_YN != null and REFERRAL_YN != ''">, REFERRAL_YN</if>
+            <if test="COOP_CD != null and COOP_CD != ''">, COOP_CD</if>
+            <if test="U_AREA != null and U_AREA != ''">, U_AREA</if>
+        ) VALUES (
+            #{USER_ID}, #{USER_NM}, #{SEX}, #{USER_ROLE}, #{USER_PWD},
+            #{BIRTH_DAY}, #{EMAIL}, #{CATEGORY_CODE}, #{PHONE_NO}, #{TEL_NO},
+            #{USER_POINT}, #{ZIP_CODE}, #{ADDRESS1}, #{ADDRESS2}, #{IPINDI},
+            #{ISUSE}, NOW(), NOW(), #{JOIN_CHANNEL}, #{JOB}
+            <if test="EXAM_REQ != null and EXAM_REQ != ''">, #{EXAM_REQ}</if>
+            <if test="F_CAT_CD != null and F_CAT_CD != ''">, #{F_CAT_CD}</if>
+            <if test="F_AREA != null and F_AREA != ''">, #{F_AREA}</if>
+            <if test="S_CAT_CD != null and S_CAT_CD != ''">, #{S_CAT_CD}</if>
+            <if test="S_AREA != null and S_AREA != ''">, #{S_AREA}</if>
+            <if test="INFO_REQ != null and INFO_REQ != ''">, #{INFO_REQ}</if>
+            <if test="EVENT_REQ != null and EVENT_REQ != ''">, #{EVENT_REQ}</if>
+            <if test="SBJ_REQ != null and SBJ_REQ != ''">, #{SBJ_REQ}</if>
+            <if test="EVENT_REQ_ETC != null and EVENT_REQ_ETC != ''">, #{EVENT_REQ_ETC}</if>
+            <if test="ISOK_SMS != null and ISOK_SMS != ''">, #{ISOK_SMS}, NOW()</if>
+            <if test="ISOK_EMAIL != null and ISOK_EMAIL != ''">, #{ISOK_EMAIL}, NOW()</if>
+            <if test="REFERRAL_YN != null and REFERRAL_YN != ''">, #{REFERRAL_YN}</if>
+            <if test="COOP_CD != null and COOP_CD != ''">, #{COOP_CD}</if>
+            <if test="U_AREA != null and U_AREA != ''">, #{U_AREA}</if>
+        )
+    </insert>
+
+    <!-- 회원 카테고리 삭제 -->
+    <delete id="userCategoryDelete" parameterType="hashMap">
+        DELETE FROM TB_MA_MEMBER_CATEGORY WHERE USER_ID = #{USER_ID}
+    </delete>
+
+    <!-- 회원 카테고리 등록 -->
+    <insert id="userCategoryInsert" parameterType="hashMap">
+        INSERT INTO TB_MA_MEMBER_CATEGORY (
+            USER_ID, CATEGORY_CODE, SEQ, REG_DT
+        ) VALUES (
+            #{USER_ID}, #{CATEGORY_CODE}, 1, NOW()
+        )
+    </insert>
+
+    <!-- 아이디 찾기 -->
+    <select id="getSearchId" parameterType="hashMap" resultType="hashMap">
+        <if test='SEARCHTYPE == "INFO"'>
+            SELECT USER_ID
+            FROM TB_MA_MEMBER
+            WHERE ISUSE = 'Y'
+            AND USER_NM = #{NAME}
+            <if test="BIRTH_DAY != null and BIRTH_DAY != ''">
+                AND BIRTH_DAY = #{BIRTH_DAY}
+            </if>
+            <if test="EMAIL != null and EMAIL != ''">
+                AND EMAIL = #{EMAIL}
+            </if>
+            <if test="SEX != null and SEX != ''">
+                AND SEX = #{SEX}
+            </if>
+            <if test="PHONE_NO != null and PHONE_NO != ''">
+                AND PHONE_NO = #{PHONE_NO}
+            </if>
+            ORDER BY REG_DT DESC
+            LIMIT 1
+        </if>
+        <if test='SEARCHTYPE == "IPIN"'>
+            SELECT USER_ID
+            FROM TB_MA_MEMBER
+            WHERE ISUSE = 'Y'
+            AND IPINDI = #{IPINDI}
+            ORDER BY REG_DT DESC
+            LIMIT 1
+        </if>
+    </select>
+
+    <!-- 비밀번호 찾기 -->
+    <select id="getSearchPW" parameterType="hashMap" resultType="hashMap">
+        <if test='SEARCHTYPE == "INFO"'>
+            SELECT
+                USER_PWD,
+                SUBSTRING(UUID(), 1, 8) AS NEW_PWD,
+                PHONE_NO,
+                EMAIL
+            FROM TB_MA_MEMBER
+            WHERE ISUSE = 'Y'
+            AND USER_ID = #{SEARCHID}
+            AND USER_NM = #{NAME}
+            <if test="BIRTH_DAY != null and BIRTH_DAY != ''">
+                AND BIRTH_DAY = #{BIRTH_DAY}
+            </if>
+            <if test="SEX != null and SEX != ''">
+                AND SEX = #{SEX}
+            </if>
+        </if>
+        <if test='SEARCHTYPE == "IPIN"'>
+            SELECT
+                USER_PWD,
+                SUBSTRING(UUID(), 1, 8) AS NEW_PWD,
+                PHONE_NO
+            FROM TB_MA_MEMBER
+            WHERE ISUSE = 'Y'
+            AND USER_ID = #{SEARCH_IPIN_ID}
+            AND IPINDI = #{IPINDI}
+        </if>
+    </select>
+
+    <!-- 로그인 로그 등록 -->
+    <insert id="loginLogInsert" parameterType="hashMap">
+        INSERT INTO MB_ACCESS_LOG (
+            ACCESS_DT, USERID, USER_IP
+        ) VALUES (
+            NOW(), #{USER_ID}, #{USER_IP}
+        )
+    </insert>
+
+    <!-- 로그인 체크 건수 -->
+    <select id="loginCheckCnt" parameterType="hashMap" resultType="int">
+        SELECT COUNT(USER_ID)
+        FROM TB_MA_MEMBER
+        WHERE LOWER(USER_ID) = LOWER(#{USER_ID})
+        AND UPD_DT BETWEEN DATE_SUB(NOW(), INTERVAL 365 DAY) AND DATE_ADD(NOW(), INTERVAL 1 DAY)
+    </select>
+
+</mapper>

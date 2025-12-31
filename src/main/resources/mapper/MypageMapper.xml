@@ -1,0 +1,351 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.academy.mapper.MypageMapper">
+
+    <!-- 내 정보 조회 -->
+    <select id="getMyInfo" parameterType="hashMap" resultType="hashMap">
+        SELECT
+            B.USER_ID,
+            B.USER_NM,
+            B.USER_POSITION,
+            B.USER_ROLE,
+            B.ADMIN_ROLE,
+            B.BIRTH_DAY,
+            B.TEL_NO,
+            B.PHONE_NO,
+            B.EMAIL1,
+            B.EMAIL2,
+            B.ADDRESS1,
+            B.ADDRESS2,
+            B.ZIP_CODE,
+            B.USER_POINT,
+            B.USER_CATEGORY_CODE,
+            B.JOIN_CHANNEL,
+            B.JOB,
+            B.EXAM_REQ,
+            B.F_CAT_CD,
+            B.F_AREA,
+            B.S_CAT_CD,
+            B.S_AREA,
+            B.INFO_REQ,
+            B.EVENT_REQ,
+            B.SBJ_REQ,
+            B.EVENT_REQ_ETC,
+            B.ISOK_SMS,
+            B.ISOK_EMAIL,
+            SUBSTRING(TEL_NO, 1, TNO1) AS TEL_NOA1,
+            SUBSTRING(TEL_NO, TNO1+1, TNO2-TNO1) TEL_NOA2,
+            SUBSTRING(TEL_NO, TNO2+1) TEL_NOA3,
+            SUBSTRING(PHONE_NO, 1, PNO1) AS PHONE_NOA1,
+            SUBSTRING(PHONE_NO, PNO1+1, PNO2-PNO1) PHONE_NOA2,
+            SUBSTRING(PHONE_NO, PNO2+1) PHONE_NOA3
+        FROM (
+            SELECT
+                A.USER_ID,
+                A.USER_NM,
+                A.USER_POSITION,
+                A.USER_ROLE,
+                CASE WHEN A.ADMIN_ROLE = 'HWANG' THEN '' ELSE TRIM(A.ADMIN_ROLE) END AS ADMIN_ROLE,
+                A.BIRTH_DAY,
+                A.TEL_NO,
+                A.PHONE_NO,
+                SUBSTRING(A.EMAIL, 1, LOCATE('@', A.EMAIL) - 1) AS EMAIL1,
+                SUBSTRING(A.EMAIL, LOCATE('@', A.EMAIL) + 1) AS EMAIL2,
+                A.ADDRESS1,
+                A.ADDRESS2,
+                A.ZIP_CODE,
+                A.USER_POINT,
+                (SELECT MIN(CATEGORY_CODE) FROM TB_MA_MEMBER_CATEGORY WHERE USER_ID = A.USER_ID) USER_CATEGORY_CODE,
+                A.JOIN_CHANNEL,
+                A.JOB,
+                A.EXAM_REQ,
+                A.F_CAT_CD,
+                A.F_AREA,
+                A.S_CAT_CD,
+                A.S_AREA,
+                A.INFO_REQ,
+                A.EVENT_REQ,
+                A.SBJ_REQ,
+                A.EVENT_REQ_ETC,
+                A.ISOK_SMS,
+                A.ISOK_EMAIL,
+                3 AS PNO1,
+                (LENGTH(A.PHONE_NO) - 4) AS PNO2,
+                (CASE WHEN A.TEL_NO LIKE '02%' THEN 2 ELSE 3 END) AS TNO1,
+                (LENGTH(A.TEL_NO) - 4) AS TNO2
+            FROM TB_MA_MEMBER A
+            WHERE USER_ID = #{USER_ID}
+        ) B
+    </select>
+
+    <!-- 내 정보 수정 -->
+    <update id="infoUpdate" parameterType="hashMap">
+        UPDATE TB_MA_MEMBER
+        SET
+            TEL_NO = #{TEL_NO}
+            , PHONE_NO = #{PHONE_NO}
+            , EMAIL = #{EMAIL}
+            , ADDRESS1 = #{ADDRESS1}
+            , ADDRESS2 = #{ADDRESS2}
+            , ZIP_CODE = #{ZIP_CODE}
+            , UPD_DT = NOW()
+            , UPD_ID = #{REG_ID}
+            , JOIN_CHANNEL = #{JOIN_CHANNEL}
+            , JOB = #{JOB}
+        <if test="EXAM_REQ != null and EXAM_REQ != ''">
+            , EXAM_REQ = #{EXAM_REQ}
+        </if>
+        <if test="SBJ_REQ != null and SBJ_REQ != ''">
+            , SBJ_REQ = #{SBJ_REQ}
+        </if>
+        <if test="F_CAT_CD != null and F_CAT_CD != ''">
+            , F_CAT_CD = #{F_CAT_CD}
+        </if>
+        <if test="F_AREA != null and F_AREA != ''">
+            , F_AREA = #{F_AREA}
+        </if>
+        <if test="S_CAT_CD != null and S_CAT_CD != ''">
+            , S_CAT_CD = #{S_CAT_CD}
+        </if>
+        <if test="S_AREA != null and S_AREA != ''">
+            , S_AREA = #{S_AREA}
+        </if>
+        <if test="INFO_REQ != null and INFO_REQ != ''">
+            , INFO_REQ = #{INFO_REQ}
+        </if>
+        <if test="EVENT_REQ != null and EVENT_REQ != ''">
+            , EVENT_REQ = #{EVENT_REQ}
+        </if>
+        <if test="EVENT_REQ_ETC != null and EVENT_REQ_ETC != ''">
+            , EVENT_REQ_ETC = #{EVENT_REQ_ETC}
+        </if>
+        <if test="ISOK_SMS != null and ISOK_SMS != ''">
+            , ISOK_SMS = #{ISOK_SMS}
+            , SMS_DT = NOW()
+        </if>
+        <if test="ISOK_EMAIL != null and ISOK_EMAIL != ''">
+            , ISOK_EMAIL = #{ISOK_EMAIL}
+            , EMAIL_DT = NOW()
+        </if>
+        <if test="U_AREA != null and U_AREA != ''">
+            , U_AREA = #{U_AREA}
+        </if>
+        WHERE USER_ID = #{USER_ID}
+    </update>
+
+    <!-- 비밀번호 확인 -->
+    <select id="pwdConfirm" parameterType="hashMap" resultType="hashMap">
+        SELECT USER_ID, USER_NM
+        FROM TB_MA_MEMBER
+        WHERE USER_ID = #{USER_ID}
+        AND USER_PWD = #{USER_PWD}
+    </select>
+
+    <!-- 비밀번호 변경 -->
+    <update id="pwdUpdate" parameterType="hashMap">
+        UPDATE TB_MA_MEMBER
+        SET
+            USER_PWD = #{USER_PWD},
+            UPD_DT = NOW(),
+            UPD_ID = #{REG_ID}
+        WHERE USER_ID = #{USER_ID}
+    </update>
+
+    <!-- 회원 탈퇴 -->
+    <update id="secessionDelete" parameterType="hashMap">
+        UPDATE TB_MA_MEMBER
+        SET
+            SEX = '',
+            BIRTH_DAY = '',
+            EMAIL = '',
+            PHONE_NO = '',
+            TEL_NO = '',
+            ZIP_CODE = '',
+            ADDRESS1 = '',
+            ADDRESS2 = '',
+            CATEGORY_CODE = '',
+            MEMO = #{MEMO},
+            IPINDI = '',
+            U_AREA = '',
+            ISUSE = 'N',
+            UPD_DT = NOW(),
+            UPD_ID = #{REG_ID}
+        WHERE USER_ID = #{USER_ID}
+        AND USER_PWD = #{USER_PWD}
+    </update>
+
+    <!-- 내 학습 정보 조회 -->
+    <select id="myStudyInfo" parameterType="hashMap" resultType="hashMap">
+        SELECT A.CATEGORY_CODE, B.NAME CAT_NM,
+               A.F_CAT_CD, A.S_CAT_CD, C.CODE_NM CLASS_NM,
+               A.F_SUBJECT, (SELECT SUBJECT_NM FROM TB_SUBJECT_INFO WHERE SUBJECT_CD = A.F_SUBJECT) F_SUBJECT_NM,
+               A.S_SUBJECT, (SELECT SUBJECT_NM FROM TB_SUBJECT_INFO WHERE SUBJECT_CD = A.S_SUBJECT) S_SUBJECT_NM
+        FROM TB_MA_MEMBER A, TB_CATEGORY_INFO B, TB_BA_CONFIG_CD C
+        WHERE A.CATEGORY_CODE = B.CODE
+        AND A.F_CAT_CD = C.CODE_VAL
+        AND C.SYS_CD = 'S_CAT_CD'
+        AND A.USER_ID = #{USER_ID}
+    </select>
+
+    <!-- 월별 학습 정보 조회 -->
+    <select id="myStudyforMonth" parameterType="hashMap" resultType="hashMap">
+        SELECT 'O' STYPE, CAST(DATE_FORMAT(B.ISCONFIRM, '%m') AS UNSIGNED) STUDY_DT, D.SUBJECT_SJT_CD, E.SUBJECT_NM, COUNT(B.MGNTNO) SBJ_CNT, SUM(C.PERIOD) STUDY_DAY
+        FROM TB_ORDERS A, TB_ORDER_MGNT_NO B, TB_MYLECTURE C, TB_LEC_MST D, TB_SUBJECT_INFO E
+        WHERE A.ORDERNO = B.ORDERNO
+        AND B.STATUSCODE = 'DLV105'
+        AND B.ORDERNO = C.ORDERNO
+        AND B.MGNTNO = C.PACKAGE_NO
+        AND C.LECTURE_NO = D.LECCODE
+        AND D.SUBJECT_SJT_CD = E.SUBJECT_CD
+        AND A.USER_ID = #{USER_ID}
+        GROUP BY DATE_FORMAT(B.ISCONFIRM, '%m'), D.SUBJECT_SJT_CD, E.SUBJECT_NM
+        UNION ALL
+        SELECT 'F' STYPE, CAST(DATE_FORMAT(B.ISCONFIRM, '%m') AS UNSIGNED) STUDY_DT, D.SUBJECT_SJT_CD, E.SUBJECT_NM, COUNT(B.MGNTNO) SBJ_CNT, SUM(C.PERIOD) STUDY_DAY
+        FROM TB_OFF_ORDERS A, TB_OFF_ORDER_MGNT_NO B, TB_OFF_MYLECTURE C, TB_OFF_LEC_MST D, TB_SUBJECT_INFO E
+        WHERE A.ORDERNO = B.ORDERNO
+        AND B.STATUSCODE = 'DLV105'
+        AND B.ORDERNO = C.ORDERNO
+        AND B.MGNTNO = C.PACKAGE_NO
+        AND C.LECTURE_NO = D.LECCODE
+        AND D.SUBJECT_SJT_CD = E.SUBJECT_CD
+        AND A.USER_ID = #{USER_ID}
+        GROUP BY DATE_FORMAT(B.ISCONFIRM, '%m'), D.SUBJECT_SJT_CD, E.SUBJECT_NM
+    </select>
+
+    <!-- 월별 모의고사 정보 조회 -->
+    <select id="myMockforMonth" parameterType="hashMap" resultType="hashMap">
+        SELECT CAST(DATE_FORMAT(A.EXAMSTARTTIME, '%m') AS UNSIGNED) MOCK_DT, COUNT(EXAMCODE) CNT
+        FROM TB_TORDERS A
+        WHERE A.USER_ID = #{USER_ID}
+        AND A.PAYMENTSTATE = 1
+        GROUP BY DATE_FORMAT(A.EXAMSTARTTIME, '%m')
+        ORDER BY DATE_FORMAT(A.EXAMSTARTTIME, '%m')
+    </select>
+
+    <!-- 내 강의 리스트 조회 -->
+    <select id="myLectureList" parameterType="hashMap" resultType="hashMap">
+        SELECT DATE_FORMAT(B.ISCONFIRM, '%Y-%m-%d') STUDY_DT, D.SUBJECT_SJT_CD, E.SUBJECT_NM, B.MGNTNO, D.SUBJECT_TITLE,
+        C.PERIOD, D.LECCODE, D.LEARNING_CD, F.NAME LEARNING_NAME,
+        D.SUBJECT_TEACHER, (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = D.SUBJECT_TEACHER) TEACHER_NM,
+        (SELECT COUNT(USERID) FROM TB_MYLECTURE WHERE LECTURE_NO = D.LECCODE) USER_CNT
+        FROM TB_ORDERS A, TB_ORDER_MGNT_NO B, TB_MYLECTURE C, TB_LEC_MST D, TB_SUBJECT_INFO E, TB_LEARNING_FORM_INFO F, TB_MA_MEMBER Z
+        WHERE A.ORDERNO = B.ORDERNO
+        AND B.STATUSCODE = 'DLV105'
+        AND B.ORDERNO = C.ORDERNO
+        AND B.MGNTNO = C.PACKAGE_NO
+        AND C.LECTURE_NO = D.LECCODE
+        AND A.USER_ID = Z.USER_ID
+        AND D.CATEGORY_CD = Z.CATEGORY_CODE
+        AND D.SUBJECT_SJT_CD IN ('1001', '1002', '1003', Z.F_SUBJECT, Z.S_SUBJECT)
+        AND D.SUBJECT_SJT_CD = E.SUBJECT_CD
+        AND D.LEARNING_CD = F.CODE
+        AND A.USER_ID = #{USER_ID}
+        ORDER BY D.SUBJECT_SJT_CD, D.LEARNING_CD, B.ISCONFIRM
+    </select>
+
+    <!-- 내 강의 코스 리스트 조회 -->
+    <select id="myLectureCourseList" parameterType="hashMap" resultType="hashMap">
+        SELECT AA.*, BB.NAME LEARNING_NM, CC.SUBJECT_NM
+        FROM (
+            SELECT D.LEARNING_CD, D.SUBJECT_SJT_CD, COUNT(MGNTNO) CNT, SUM(C.PERIOD) STUDY_DAY
+            FROM TB_ORDERS A, TB_ORDER_MGNT_NO B, TB_MYLECTURE C, TB_LEC_MST D
+            WHERE A.ORDERNO = B.ORDERNO
+            AND B.STATUSCODE = 'DLV105'
+            AND B.ORDERNO = C.ORDERNO
+            AND B.MGNTNO = C.PACKAGE_NO
+            AND C.LECTURE_NO = D.LECCODE
+            AND A.USER_ID = #{USER_ID}
+            GROUP BY D.LEARNING_CD, D.SUBJECT_SJT_CD
+            ORDER BY D.LEARNING_CD, D.SUBJECT_SJT_CD
+        ) AA, TB_LEARNING_FORM_INFO BB, TB_SUBJECT_INFO CC
+        WHERE AA.LEARNING_CD = BB.CODE
+        AND AA.SUBJECT_SJT_CD = CC.SUBJECT_CD
+        ORDER BY SUBJECT_SJT_CD, LEARNING_CD
+    </select>
+
+    <!-- 수료증 강의 리스트 조회 -->
+    <select id="myCertLectureList" parameterType="hashMap" resultType="hashMap">
+        SELECT A.USER_ID, A.ORDERNO, B.MGNTNO, B.ISCONFIRM, B.PTYPE, C.LEARNING_CD, C.SUBJECT_TITLE, C.SUBJECT_TEACHER,
+               Z.START_DATE, Z.END_DATE, Z.STUDY_PERCENT, Z.LEC_STATUS,
+               (SELECT NAME FROM TB_LEARNING_FORM_INFO WHERE CODE = C.LEARNING_CD) AS LEARNING_NM,
+               (SELECT SUBJECT_NM FROM TB_SUBJECT_INFO WHERE SUBJECT_CD = C.SUBJECT_SJT_CD) SUBJECT_NM,
+               (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = C.SUBJECT_TEACHER) TEACHER_NM
+        FROM TB_ORDERS A
+        INNER JOIN TB_ORDER_MGNT_NO B ON A.ORDERNO = B.ORDERNO
+        INNER JOIN TB_LEC_MST C ON B.MGNTNO = C.LECCODE
+        LEFT JOIN (
+            SELECT USERID, ORDERNO, PACKAGE_NO, LECTURE_NO,
+                   START_DATE, END_DATE, STUDY_PERCENT,
+                   PARENT_ORDERNO,
+                   CASE LEC_STATUS WHEN 'E' THEN '수강종료' ELSE '수강중' END LEC_STATUS
+            FROM TB_MYLECTURE
+            WHERE LEFT(PACKAGE_NO, 1) = 'D'
+            AND PARENT_ORDERNO IS NULL
+        ) Z ON B.ORDERNO = Z.ORDERNO AND B.MGNTNO = Z.PACKAGE_NO
+        WHERE A.USER_ID = #{USER_ID}
+        AND B.STATUSCODE = 'DLV105'
+    </select>
+
+    <!-- 수료증 패키지 리스트 조회 -->
+    <select id="myCertPackageList" parameterType="hashMap" resultType="hashMap">
+        SELECT A.USER_ID, A.ORDERNO, B.MGNTNO, B.ISCONFIRM, B.PTYPE, C.LEARNING_CD, C.SUBJECT_TITLE, C.SUBJECT_TEACHER,
+               D.PACKAGE_NO, D.LECTURE_NO, D.START_DATE, D.END_DATE, D.STUDY_PERCENT, D.LEC_STATUS,
+               (SELECT SUBJECT_TITLE FROM TB_LEC_MST WHERE LECCODE = B.MGNTNO) PACKAGE_NM,
+               (SELECT NAME FROM TB_LEARNING_FORM_INFO WHERE CODE = C.LEARNING_CD) AS LEARNING_NM,
+               (SELECT SUBJECT_NM FROM TB_SUBJECT_INFO WHERE SUBJECT_CD = C.SUBJECT_SJT_CD) SUBJECT_NM,
+               (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = C.SUBJECT_TEACHER) TEACHER_NM
+        FROM TB_ORDERS A, TB_ORDER_MGNT_NO B, TB_LEC_MST C, TB_MYLECTURE D
+        WHERE A.ORDERNO = B.ORDERNO
+        AND B.STATUSCODE = 'DLV105'
+        AND B.ORDERNO = D.ORDERNO
+        AND B.MGNTNO = D.PACKAGE_NO
+        AND D.LECTURE_NO = C.LECCODE
+        AND B.ORDERNO = #{ORDERNO}
+        AND B.MGNTNO = #{MGNTNO}
+    </select>
+
+    <!-- 수료증 강의 상세 조회 -->
+    <select id="myCertLectureView" parameterType="hashMap" resultType="hashMap">
+        SELECT D.USER_NM, D.BIRTH_DAY, CONCAT(D.ADDRESS1, D.ADDRESS2) ADDRESS, D.TEL_NO, D.PHONE_NO,
+               B.PTYPE, C.SUBJECT_TITLE,
+               Z.START_DATE, Z.END_DATE, Z.STUDY_PERCENT,
+               (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = C.SUBJECT_TEACHER) TEACHER_NM
+        FROM TB_ORDERS A
+        INNER JOIN TB_ORDER_MGNT_NO B ON A.ORDERNO = B.ORDERNO
+        INNER JOIN TB_LEC_MST C ON B.MGNTNO = C.LECCODE
+        INNER JOIN TB_MA_MEMBER D ON A.USER_ID = D.USER_ID
+        LEFT JOIN (
+            SELECT USERID, ORDERNO, PACKAGE_NO, LECTURE_NO,
+                   START_DATE, END_DATE, STUDY_PERCENT,
+                   PARENT_ORDERNO,
+                   IFNULL(LEC_STATUS, 'I') LEC_STATUS
+            FROM TB_MYLECTURE
+            WHERE LEFT(PACKAGE_NO, 1) = 'D'
+            AND PARENT_ORDERNO IS NULL
+        ) Z ON B.ORDERNO = Z.ORDERNO AND B.MGNTNO = Z.PACKAGE_NO
+        WHERE A.USER_ID = #{USER_ID}
+        AND B.STATUSCODE = 'DLV105'
+        AND B.ORDERNO = #{ORDERNO}
+        AND B.MGNTNO = #{MGNTNO}
+    </select>
+
+    <!-- 수료증 패키지 상세 조회 -->
+    <select id="myCertPackageView" parameterType="hashMap" resultType="hashMap">
+        SELECT D.USER_NM, D.BIRTH_DAY, CONCAT(D.ADDRESS1, D.ADDRESS2) ADDRESS, D.TEL_NO, D.PHONE_NO,
+               'D' PTYPE, C.SUBJECT_TITLE,
+               Z.START_DATE, Z.END_DATE, Z.STUDY_PERCENT,
+               (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = C.SUBJECT_TEACHER) TEACHER_NM
+        FROM TB_ORDERS A, TB_ORDER_MGNT_NO B, TB_LEC_MST C, TB_MA_MEMBER D, TB_MYLECTURE Z
+        WHERE A.ORDERNO = B.ORDERNO
+        AND A.USER_ID = #{USER_ID}
+        AND B.STATUSCODE = 'DLV105'
+        AND A.USER_ID = D.USER_ID
+        AND B.ORDERNO = Z.ORDERNO
+        AND B.MGNTNO = Z.PACKAGE_NO
+        AND Z.LECTURE_NO = C.LECCODE
+        AND Z.ORDERNO = #{ORDERNO}
+        AND Z.PACKAGE_NO = #{PACKAGE_NO}
+        AND Z.LECTURE_NO = #{LECTURE_NO}
+    </select>
+
+</mapper>

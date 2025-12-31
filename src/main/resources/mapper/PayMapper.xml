@@ -1,0 +1,687 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.academy.mapper.PayMapper">
+
+    <!-- 전체 주문 결제 정보 조회 (온라인 + 오프라인 + 모의고사) -->
+    <select id="payOrderAlllist" parameterType="hashMap" resultType="hashMap">
+        SELECT * FROM (
+            SELECT LTBL.*, @rownum := @rownum + 1 AS rnum
+            FROM (
+                SELECT LTBL.*
+                FROM (
+                    SELECT
+                        '동영상' GUBUN, AA.ORDERNO, AA.MGNTNO, AA.STATUSCODE, AA.PTYPE, AA.WMV_PMP,
+                        (SELECT SUM(CNT) FROM TB_ORDER_MGNT_NO WHERE ORDERNO = AA.ORDERNO AND GIFT_YN = 'N' AND STATUSCODE <![CDATA[<>]]> 'DLV230') AS BUY_CNT,
+                        (SELECT CODE_NM FROM TB_COMMON_CODE WHERE CODE_TYPE = 'ORDER_STATUSCODE' AND CODE = AA.STATUSCODE) STATUS_NM,
+                        BB.PRICE, BB.REG_DT, DATE_FORMAT(BB.REG_DT, '%Y-%m-%d %H:%i:%s') AS REG_DD,
+                        CC.SUBJECT_TITLE, CC.CATEGORY_CD, CC.LEARNING_CD, CC.REC_GUBUN, CC.LEC_GUBUN,
+                        (SELECT SENDNO FROM TB_DELIVERS WHERE ORDERNO = AA.ORDERNO LIMIT 1) AS SENDNO,
+                        CASE
+                            WHEN (SELECT SENDDATE FROM TB_DELIVERS WHERE ORDERNO = AA.ORDERNO LIMIT 1) <![CDATA[<]]> '2015-07-01' THEN 'T'
+                            WHEN (SELECT SENDDATE FROM TB_DELIVERS WHERE ORDERNO = AA.ORDERNO LIMIT 1) <![CDATA[<]]> '2016-12-01' THEN 'H'
+                            ELSE 'T'
+                        END DLV_COMP,
+                        (SELECT SUBSTRING(NAME, 1, 2) FROM TB_LEARNING_FORM_INFO WHERE CODE = CC.LEARNING_CD) AS LRNTYPE,
+                        CASE AA.PTYPE
+                            WHEN 'D' THEN '단과' WHEN 'J' THEN '종합' WHEN 'N' THEN '선택형' WHEN 'P' THEN '패키지'
+                            WHEN 'Y' THEN '연회원패키지' WHEN 'L' THEN '교재' WHEN 'C' THEN '선택'
+                            WHEN 'S' THEN '사물함' WHEN 'T' THEN '독서실' WHEN 'F' THEN '무료특강' ELSE ''
+                        END KDTYPE,
+                        (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = CC.SUBJECT_TEACHER) SUBJECT_TEACHER_NM,
+                        DD.BOOK_NM, '' BOX_NM, AA.TID,
+                        CASE
+                            WHEN BB.PAYCODE = 'PAY120' THEN
+                                CASE AA.STATUSCODE
+                                    WHEN 'DLV100' THEN IFNULL(BB.INPUT_DT, DATE_FORMAT(DATE_ADD(BB.REG_DT, INTERVAL 7 DAY), '%Y.%m.%d'))
+                                    WHEN 'DLV105' THEN DATE_FORMAT((SELECT DD2.IPDATE FROM TB_ORDERS DD2 WHERE DD2.ORDERNO = AA.ORDERNO LIMIT 1), '%Y.%m.%d')
+                                    ELSE ''
+                                END
+                            ELSE ''
+                        END STATUS_DT,
+                        CASE
+                            WHEN DATE_FORMAT((SELECT DD3.IPDATE FROM TB_ORDERS DD3 WHERE DD3.ORDERNO = AA.ORDERNO LIMIT 1), '%Y%m%d') = DATE_FORMAT(NOW(), '%Y%m%d')
+                                AND (SELECT COUNT(EE.ORDERNO) FROM TB_MYMOVIE EE WHERE EE.ORDERNO = AA.ORDERNO) <![CDATA[<]]> 1
+                                AND (SELECT COUNT(FF.MGNTNO) FROM TB_ORDER_MGNT_NO FF WHERE FF.ORDERNO = AA.ORDERNO AND PTYPE = 'L') = 0
+                            THEN 'Y'
+                            ELSE 'N'
+                        END AS CANCEL_YN,
+                        BB.PAYCODE,
+                        (SELECT CODE_NM FROM TB_COMMON_CODE WHERE CODE_TYPE = 'PAYMENT_CODE' AND CODE = BB.PAYCODE) PAYCODE_NM,
+                        BB.ADDPRICE, BB.POINT
+                    FROM (
+                        SELECT A.ORDERNO, A.TID, PTYPE, WMV_PMP, MIN(B.MGNTNO) MGNTNO, MAX(B.STATUSCODE) STATUSCODE
+                        FROM TB_ORDERS A
+                        INNER JOIN TB_ORDER_MGNT_NO B ON A.ORDERNO = B.ORDERNO
+                        WHERE A.USER_ID = #{USER_ID}
+                        GROUP BY A.ORDERNO, A.TID, PTYPE, WMV_PMP
+                    ) AA
+                    INNER JOIN TB_APPROVALS BB ON AA.ORDERNO = BB.ORDERNO
+                    LEFT OUTER JOIN TB_LEC_MST CC ON AA.MGNTNO = CC.LECCODE
+                    LEFT OUTER JOIN TB_CA_BOOK DD ON AA.MGNTNO = DD.RSC_ID
+
+                    UNION ALL
+
+                    SELECT
+                        '학원' GUBUN, AA.ORDERNO, AA.MGNTNO, AA.STATUSCODE, AA.PTYPE, AA.WMV_PMP,
+                        (SELECT SUM(CNT) FROM TB_OFF_ORDER_MGNT_NO WHERE ORDERNO = AA.ORDERNO AND STATUSCODE <![CDATA[<>]]> 'DLV230') AS BUY_CNT,
+                        (SELECT CODE_NM FROM TB_COMMON_CODE WHERE CODE_TYPE = 'ORDER_STATUSCODE' AND CODE = AA.STATUSCODE) STATUS_NM,
+                        BB.PRICE, BB.REG_DT, DATE_FORMAT(BB.REG_DT, '%Y-%m-%d %H:%i:%s') AS REG_DD,
+                        CC.SUBJECT_TITLE, CC.CATEGORY_CD, CC.LEARNING_CD, CC.REC_GUBUN, CC.LEC_GUBUN,
+                        (SELECT SENDNO FROM TB_DELIVERS WHERE ORDERNO = AA.ORDERNO LIMIT 1) AS SENDNO,
+                        CASE
+                            WHEN (SELECT SENDDATE FROM TB_DELIVERS WHERE ORDERNO = AA.ORDERNO LIMIT 1) <![CDATA[<]]> '2015-07-01' THEN 'T'
+                            WHEN (SELECT SENDDATE FROM TB_DELIVERS WHERE ORDERNO = AA.ORDERNO LIMIT 1) <![CDATA[<]]> '2016-12-01' THEN 'H'
+                            ELSE 'T'
+                        END DLV_COMP,
+                        (SELECT SUBSTRING(NAME, 1, 2) FROM TB_LEARNING_FORM_INFO WHERE CODE = CC.LEARNING_CD) AS LRNTYPE,
+                        CASE AA.PTYPE
+                            WHEN 'D' THEN '단과' WHEN 'J' THEN '종합' WHEN 'N' THEN '선택형' WHEN 'P' THEN '패키지'
+                            WHEN 'Y' THEN '연회원패키지' WHEN 'L' THEN '교재' WHEN 'C' THEN '선택'
+                            WHEN 'S' THEN '사물함' WHEN 'T' THEN '독서실' WHEN 'F' THEN '무료특강' ELSE ''
+                        END KDTYPE,
+                        (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = CC.SUBJECT_TEACHER) SUBJECT_TEACHER_NM,
+                        '' BOOK_NM,
+                        CONCAT((SELECT BOX_NM FROM TB_OFF_BOX WHERE BOX_CD = DD.BOX_CD), ' ', DD.BOX_NUM) BOX_NM,
+                        AA.TID, '' STATUS_DT,
+                        CASE
+                            WHEN DATE_FORMAT((SELECT DD4.IPDATE FROM TB_OFF_ORDERS DD4 WHERE DD4.ORDERNO = AA.ORDERNO LIMIT 1), '%Y%m%d') = DATE_FORMAT(NOW(), '%Y%m%d')
+                            THEN 'Y' ELSE 'N'
+                        END AS CANCEL_YN,
+                        BB.PAYCODE,
+                        (SELECT CODE_NM FROM TB_COMMON_CODE WHERE CODE_TYPE = 'PAYMENT_CODE' AND CODE = BB.PAYCODE) PAYCODE_NM,
+                        BB.ADDPRICE, BB.POINT
+                    FROM (
+                        SELECT A.ORDERNO, A.TID, PTYPE, WMV_PMP, MIN(B.MGNTNO) MGNTNO, MAX(B.STATUSCODE) STATUSCODE
+                        FROM TB_OFF_ORDERS A
+                        INNER JOIN TB_OFF_ORDER_MGNT_NO B ON A.ORDERNO = B.ORDERNO
+                        WHERE A.USER_ID = #{USER_ID}
+                        GROUP BY A.ORDERNO, A.TID, PTYPE, WMV_PMP
+                    ) AA
+                    INNER JOIN TB_OFF_APPROVALS BB ON AA.ORDERNO = BB.ORDERNO
+                    LEFT OUTER JOIN TB_OFF_LEC_MST CC ON AA.MGNTNO = CC.LECCODE
+                    LEFT OUTER JOIN TB_OFF_BOX_RENT DD ON AA.ORDERNO = DD.ORDERNO
+
+                    UNION ALL
+
+                    SELECT
+                        '모의고사' AS GUBUN, AA.ORDERNO, '' MGNTNO, CONCAT(AA.PAYMENTSTATE, '') STATUSCODE, 'E' AS PTYPE, '' WMV_PMP,
+                        0 AS BUY_CNT,
+                        CASE AA.PAYMENTSTATE
+                            WHEN 1 THEN '입금완료' WHEN 0 THEN '입금대기중' WHEN 3 THEN '취소완료' WHEN 2 THEN '환불완료' ELSE ' '
+                        END STATUS_NM,
+                        AA.PAYMENTTARGETAMOUNT AS PRICE, AA.REG_DT, DATE_FORMAT(BB.REG_DT, '%Y-%m-%d %H:%i:%s') AS REG_DD,
+                        BB.MOCKNAME AS SUBJECT_TITLE, AA.CLASSCODE AS CATEGORY_CD, AA.CLASSSERIESCODE LEARNING_CD,
+                        CONCAT(AA.RECEIPTTYPE, '') AS REC_GUBUN, CONCAT(AA.EXAMTYPE, '') AS LEC_GUBUN,
+                        '' AS SENDNO, '' AS DLV_COMP, '모의고사' AS LRNTYPE, '' AS KDTYPE, '' SUBJECT_TEACHER_NM,
+                        '' BOOK_NM, '' BOX_NM, '' TID, '' STATUS_DT, 'N' AS CANCEL_YN, '' PAYCODE, '' PAYCODE_NM,
+                        0 ADDPRICE, 0 POINT
+                    FROM TB_TORDERS AA
+                    INNER JOIN TB_TMOCKREGISTRATION BB ON AA.EXAMCODE = BB.MOCKCODE
+                    WHERE AA.USER_ID = #{USER_ID}
+                ) LTBL
+                WHERE STATUSCODE NOT IN ('DLV155')
+                <if test='searchSDate != null and searchSDate != "" and searchEDate != null and searchEDate != ""'>
+                    AND LTBL.REG_DT BETWEEN #{searchSDate} AND DATE_ADD(#{searchEDate}, INTERVAL 1 DAY)
+                </if>
+                ORDER BY LTBL.REG_DT DESC
+            ) LTBL, (SELECT @rownum := 0) r
+        ) T
+        <if test='startNo != null and endNo != null'>
+            WHERE rnum > #{startNo} AND rnum <![CDATA[<=]]> #{endNo}
+        </if>
+    </select>
+
+    <!-- 전체 주문 결제 건수 조회 -->
+    <select id="orderAlllistCount" parameterType="hashMap" resultType="int">
+        SELECT COUNT(*)
+        FROM (
+            SELECT AA.STATUSCODE, BB.REG_DT
+            FROM (
+                SELECT A.ORDERNO, A.TID, PTYPE, WMV_PMP, MIN(B.MGNTNO) MGNTNO, MAX(B.STATUSCODE) STATUSCODE
+                FROM TB_ORDERS A
+                INNER JOIN TB_ORDER_MGNT_NO B ON A.ORDERNO = B.ORDERNO
+                WHERE A.USER_ID = #{USER_ID}
+                GROUP BY A.ORDERNO, A.TID, PTYPE, WMV_PMP
+            ) AA
+            INNER JOIN TB_APPROVALS BB ON AA.ORDERNO = BB.ORDERNO
+            LEFT OUTER JOIN TB_LEC_MST CC ON AA.MGNTNO = CC.LECCODE
+            LEFT OUTER JOIN TB_CA_BOOK DD ON AA.MGNTNO = DD.RSC_ID
+
+            UNION ALL
+
+            SELECT AA.STATUSCODE, BB.REG_DT
+            FROM (
+                SELECT A.ORDERNO, A.TID, PTYPE, WMV_PMP, MIN(B.MGNTNO) MGNTNO, MAX(B.STATUSCODE) STATUSCODE
+                FROM TB_OFF_ORDERS A
+                INNER JOIN TB_OFF_ORDER_MGNT_NO B ON A.ORDERNO = B.ORDERNO
+                WHERE A.USER_ID = #{USER_ID}
+                GROUP BY A.ORDERNO, A.TID, PTYPE, WMV_PMP
+            ) AA
+            INNER JOIN TB_OFF_APPROVALS BB ON AA.ORDERNO = BB.ORDERNO
+            LEFT OUTER JOIN TB_OFF_LEC_MST CC ON AA.MGNTNO = CC.LECCODE
+            LEFT OUTER JOIN TB_OFF_BOX_RENT DD ON AA.ORDERNO = DD.ORDERNO
+
+            UNION ALL
+
+            SELECT CONCAT(AA.PAYMENTSTATE, '') STATUSCODE, AA.REG_DT
+            FROM TB_TORDERS AA
+            INNER JOIN TB_TMOCKREGISTRATION BB ON AA.EXAMCODE = BB.MOCKCODE
+            WHERE AA.USER_ID = #{USER_ID}
+        ) LTBL
+        WHERE STATUSCODE NOT IN ('DLV155')
+        <if test='searchSDate != null and searchSDate != "" and searchEDate != null and searchEDate != ""'>
+            AND LTBL.REG_DT BETWEEN #{searchSDate} AND DATE_ADD(#{searchEDate}, INTERVAL 1 DAY)
+        </if>
+    </select>
+
+    <!-- 온라인 주문 결제 정보 조회 -->
+    <select id="payOrderOnlist" parameterType="hashMap" resultType="hashMap">
+        SELECT LTBL.*
+        FROM (
+            SELECT
+                '동영상' GUBUN, AA.ORDERNO, AA.MGNTNO, AA.STATUSCODE, AA.PTYPE, AA.WMV_PMP,
+                (SELECT SUM(CNT) FROM TB_ORDER_MGNT_NO WHERE ORDERNO = AA.ORDERNO AND GIFT_YN = 'N' AND STATUSCODE <![CDATA[<>]]> 'DLV230') AS BUY_CNT,
+                (SELECT CODE_NM FROM TB_COMMON_CODE WHERE CODE_TYPE = 'ORDER_STATUSCODE' AND CODE = AA.STATUSCODE) STATUS_NM,
+                BB.PRICE, BB.REG_DT, DATE_FORMAT(BB.REG_DT, '%Y-%m-%d %H:%i:%s') AS REG_DD,
+                CC.SUBJECT_TITLE, CC.CATEGORY_CD, CC.LEARNING_CD, CC.REC_GUBUN, CC.LEC_GUBUN,
+                (SELECT SENDNO FROM TB_DELIVERS WHERE ORDERNO = AA.ORDERNO LIMIT 1) AS SENDNO,
+                (SELECT SUBSTRING(NAME, 1, 2) FROM TB_LEARNING_FORM_INFO WHERE CODE = CC.LEARNING_CD) AS LRNTYPE,
+                CASE AA.PTYPE
+                    WHEN 'D' THEN '단과' WHEN 'J' THEN '종합' WHEN 'N' THEN '선택형' WHEN 'P' THEN '패키지'
+                    WHEN 'Y' THEN '연회원패키지' WHEN 'L' THEN '교재' WHEN 'C' THEN '선택'
+                    WHEN 'S' THEN '사물함' WHEN 'T' THEN '독서실' WHEN 'F' THEN '무료특강' ELSE ''
+                END KDTYPE,
+                (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = CC.SUBJECT_TEACHER) SUBJECT_TEACHER_NM,
+                DD.BOOK_NM, '' BOX_NM, AA.TID,
+                (SELECT CODE_NM FROM TB_COMMON_CODE WHERE CODE_TYPE = 'PAYMENT_CODE' AND CODE = BB.PAYCODE) PAYCODE_NM,
+                BB.ADDPRICE, BB.POINT
+            FROM (
+                SELECT A.ORDERNO, A.TID, PTYPE, WMV_PMP, MIN(B.MGNTNO) MGNTNO, MAX(B.STATUSCODE) STATUSCODE
+                FROM TB_ORDERS A
+                INNER JOIN TB_ORDER_MGNT_NO B ON A.ORDERNO = B.ORDERNO
+                WHERE A.USER_ID = #{USER_ID}
+                GROUP BY A.ORDERNO, A.TID, PTYPE, WMV_PMP
+            ) AA
+            INNER JOIN TB_APPROVALS BB ON AA.ORDERNO = BB.ORDERNO
+            LEFT OUTER JOIN TB_LEC_MST CC ON AA.MGNTNO = CC.LECCODE
+            LEFT OUTER JOIN TB_CA_BOOK DD ON AA.MGNTNO = DD.RSC_ID
+        ) LTBL
+        WHERE STATUSCODE NOT IN ('DLV155')
+        <if test='OFType != null and OFType == "O"'>
+            AND (PTYPE = 'D' OR PTYPE = 'L' OR PTYPE = 'P' OR PTYPE = 'Y')
+            AND ORDERNO NOT LIKE 'F%'
+        </if>
+        <if test='searchSDate != null and searchSDate != "" and searchEDate != null and searchEDate != ""'>
+            AND LTBL.REG_DT BETWEEN #{searchSDate} AND DATE_ADD(#{searchEDate}, INTERVAL 1 DAY)
+        </if>
+        ORDER BY LTBL.REG_DT DESC
+    </select>
+
+    <!-- 오프라인(학원실강) 주문 결제 정보 조회 -->
+    <select id="payOrderOfflist" parameterType="hashMap" resultType="hashMap">
+        SELECT LTBL.*
+        FROM (
+            SELECT
+                '학원' GUBUN, AA.ORDERNO, AA.MGNTNO, AA.STATUSCODE, AA.PTYPE, AA.WMV_PMP,
+                (SELECT SUM(CNT) FROM TB_OFF_ORDER_MGNT_NO WHERE ORDERNO = AA.ORDERNO) AS BUY_CNT,
+                CASE AA.STATUSCODE
+                    WHEN 'DLV105' THEN '입금완료' WHEN 'DLV100' THEN '입금대기중' WHEN 'DLV110' THEN '배송준비중'
+                    WHEN 'DLV120' THEN '배송중' WHEN 'DLV130' THEN '배송완료' WHEN 'DLV140' THEN '취소요청'
+                    WHEN 'DLV150' THEN '취소완료' WHEN 'DLV160' THEN '교환요청' WHEN 'DLV170' THEN '교환배송중'
+                    WHEN 'DLV180' THEN '교환완료' WHEN 'DLV220' THEN '환불요청' WHEN 'DLV230' THEN '환불완료' ELSE ' '
+                END STATUS_NM,
+                BB.PRICE, BB.REG_DT, DATE_FORMAT(BB.REG_DT, '%Y-%m-%d %H:%i:%s') AS REG_DD,
+                BB.PAYCODE,
+                CASE BB.PAYCODE
+                    WHEN 'PAY100' THEN '무료수강' WHEN 'PAY110' THEN '카드결제' WHEN 'PAY120' THEN '무통장입금'
+                    WHEN 'PAY130' THEN '계좌이체' WHEN 'PAY140' THEN '현금' WHEN 'PAY150' THEN '예금' ELSE ''
+                END PAYCODE_NM,
+                CC.SUBJECT_TITLE, CC.CATEGORY_CD, CC.LEARNING_CD, CC.REC_GUBUN, CC.LEC_GUBUN,
+                (SELECT SENDNO FROM TB_DELIVERS WHERE ORDERNO = AA.ORDERNO LIMIT 1) AS SENDNO,
+                (SELECT SUBSTRING(NAME, 1, 2) FROM TB_LEARNING_FORM_INFO WHERE CODE = CC.LEARNING_CD) AS LRNTYPE,
+                CASE AA.PTYPE
+                    WHEN 'D' THEN '단과' WHEN 'J' THEN '종합' WHEN 'N' THEN '선택형' WHEN 'P' THEN '패키지'
+                    WHEN 'Y' THEN '연회원패키지' WHEN 'L' THEN '교재' WHEN 'C' THEN '선택'
+                    WHEN 'S' THEN '사물함' WHEN 'T' THEN '독서실' WHEN 'F' THEN '무료특강' ELSE ''
+                END KDTYPE,
+                (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = CC.SUBJECT_TEACHER) SUBJECT_TEACHER_NM,
+                '' BOOK_NM,
+                CONCAT((SELECT BOX_NM FROM TB_OFF_BOX WHERE BOX_CD = DD.BOX_CD), ' ', DD.BOX_NUM) BOX_NM,
+                AA.TID,
+                CASE
+                    WHEN DATE_FORMAT((SELECT DD5.IPDATE FROM TB_OFF_ORDERS DD5 WHERE DD5.ORDERNO = AA.ORDERNO LIMIT 1), '%Y%m%d') = DATE_FORMAT(NOW(), '%Y%m%d')
+                        AND (SELECT COUNT(FF.ORDERNO) FROM TB_OFF_ORDER_MGNT_NO FF WHERE FF.ORDERNO = AA.ORDERNO AND FF.PTYPE = 'L') <![CDATA[<]]> 1
+                    THEN 'Y' ELSE 'N'
+                END AS CANCEL_YN
+            FROM (
+                SELECT A.ORDERNO, A.TID, PTYPE, WMV_PMP, MIN(B.MGNTNO) MGNTNO, MAX(B.STATUSCODE) STATUSCODE
+                FROM TB_OFF_ORDERS A
+                INNER JOIN TB_OFF_ORDER_MGNT_NO B ON A.ORDERNO = B.ORDERNO
+                WHERE A.USER_ID = #{USER_ID}
+                GROUP BY A.ORDERNO, A.TID, PTYPE, WMV_PMP
+            ) AA
+            INNER JOIN TB_OFF_APPROVALS BB ON AA.ORDERNO = BB.ORDERNO
+            LEFT OUTER JOIN TB_OFF_LEC_MST CC ON AA.MGNTNO = CC.LECCODE
+            LEFT OUTER JOIN TB_OFF_BOX_RENT DD ON AA.ORDERNO = DD.ORDERNO
+        ) LTBL
+        WHERE 1 = 1
+        <if test='searchSDate != null and searchSDate != "" and searchEDate != null and searchEDate != ""'>
+            AND LTBL.REG_DT BETWEEN #{searchSDate} AND DATE_ADD(#{searchEDate}, INTERVAL 1 DAY)
+        </if>
+        ORDER BY LTBL.REG_DT DESC
+    </select>
+
+    <!-- 모의고사 주문 결제 정보 조회 -->
+    <select id="payTOrderList" parameterType="hashMap" resultType="hashMap">
+        SELECT LTBL.*
+        FROM (
+            SELECT
+                '모의고사' AS GUBUN, AA.ORDERNO, '' MGNTNO, CONCAT(AA.PAYMENTSTATE, '') STATUSCODE, 'E' AS PTYPE, '' WMV_PMP,
+                CASE AA.PAYMENTSTATE
+                    WHEN 1 THEN '입금완료' WHEN 0 THEN '입금대기중' WHEN 3 THEN '취소완료' WHEN 2 THEN '환불완료' ELSE ' '
+                END STATUS_NM,
+                AA.PAYMENTTARGETAMOUNT AS PRICE, AA.REG_DT, BB.MOCKNAME AS SUBJECT_TITLE,
+                AA.CLASSCODE AS CATEGORY_CD, AA.CLASSSERIESCODE LEARNING_CD,
+                CONCAT(AA.RECEIPTTYPE, '') AS REC_GUBUN, CONCAT(AA.EXAMTYPE, '') AS LEC_GUBUN,
+                '' AS SENDNO, '모의고사' AS LRNTYPE, '' AS KDTYPE, '' SUBJECT_TEACHER_NM,
+                '' BOOK_NM, '' BOX_NM, '' ROOM_NM, '' TID
+            FROM TB_TORDERS AA
+            INNER JOIN TB_TMOCKREGISTRATION BB ON AA.EXAMCODE = BB.MOCKCODE
+            WHERE AA.USER_ID = #{USER_ID}
+        ) LTBL
+        WHERE 1 = 1
+        <if test='searchSDate != null and searchSDate != "" and searchEDate != null and searchEDate != ""'>
+            AND LTBL.REG_DT BETWEEN #{searchSDate} AND DATE_ADD(#{searchEDate}, INTERVAL 1 DAY)
+        </if>
+        ORDER BY LTBL.REG_DT DESC
+    </select>
+
+    <!-- 온라인 강좌 주문 상세 조회 -->
+    <select id="orderDetailLectureOnlist" parameterType="hashMap" resultType="hashMap">
+        SELECT
+            A.ORDERNO, B.LECCODE, A.PTYPE, A.WMV_PMP, A.ISCONFIRM, B.SUBJECT_TEACHER,
+            (SELECT SUBSTRING(NAME, 1, 2) FROM TB_LEARNING_FORM_INFO WHERE CODE = B.LEARNING_CD) AS LRNTYPE,
+            CASE B.LEC_TYPE_CHOICE
+                WHEN 'D' THEN '단과' WHEN 'J' THEN '종합' WHEN 'N' THEN '선택' WHEN 'P' THEN '패키지' ELSE ''
+            END KDTYPE,
+            (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = B.SUBJECT_TEACHER) SUBJECT_TEACHER_NM,
+            B.SUBJECT_TITLE, B.SUBJECT_DISCOUNT, B.SUBJECT_PRICE, B.CATEGORY_CD, B.LEARNING_CD, B.REC_GUBUN, B.LEC_GUBUN, B.SUBJECT_SJT_CD,
+            IFNULL(CASE WHEN A.GIFT_YN = 'Y' THEN 0 ELSE A.PRICE END, 0) DISCOUNT_PRICE,
+            B.LEC_TYPE_CHOICE,
+            A.STATUSCODE,
+            CASE A.STATUSCODE
+                WHEN 'DLV105' THEN '입금완료' WHEN 'DLV100' THEN '입금대기중' WHEN 'DLV110' THEN '배송준비중'
+                WHEN 'DLV120' THEN '배송중' WHEN 'DLV130' THEN '배송완료' WHEN 'DLV140' THEN '취소요청'
+                WHEN 'DLV150' THEN '취소완료' WHEN 'DLV160' THEN '교환요청' WHEN 'DLV170' THEN '교환배송중'
+                WHEN 'DLV180' THEN '교환완료' WHEN 'DLV220' THEN '환불요청' WHEN 'DLV230' THEN '환불완료' ELSE ' '
+            END STATUS_NM,
+            A.CONFIRMDATE, DATE_FORMAT(A.CONFIRMDATE, '%Y-%m-%d %H:%i:%s') AS CONFIRMDATE_DD,
+            CASE WHEN A.GIFT_YN = 'Y' THEN 'Y' ELSE 'N' END AS GIFT_YN,
+            CASE
+                WHEN BB.PAYCODE = 'PAY120' THEN
+                    CASE A.STATUSCODE
+                        WHEN 'DLV100' THEN IFNULL(BB.INPUT_DT, DATE_FORMAT(DATE_ADD(BB.REG_DT, INTERVAL 7 DAY), '%Y.%m.%d'))
+                        WHEN 'DLV105' THEN DATE_FORMAT((SELECT DD6.IPDATE FROM TB_ORDERS DD6 WHERE DD6.ORDERNO = A.ORDERNO LIMIT 1), '%Y.%m.%d')
+                        ELSE ''
+                    END
+                ELSE ''
+            END STATUS_DT
+        FROM TB_APPROVALS BB, TB_ORDER_MGNT_NO A
+        INNER JOIN TB_LEC_MST B ON A.MGNTNO = B.LECCODE
+        WHERE A.ORDERNO = BB.ORDERNO
+            AND B.LEC_TYPE_CHOICE = 'D'
+            AND A.ORDERNO = #{ORDERNO}
+
+        UNION ALL
+
+        SELECT
+            A.ORDERNO, B.LECCODE, A.PTYPE, A.WMV_PMP, A.ISCONFIRM, '' SUBJECT_TEACHER,
+            (SELECT SUBSTRING(NAME, 1, 2) FROM TB_LEARNING_FORM_INFO WHERE CODE = B.LEARNING_CD) AS LRNTYPE,
+            CASE B.LEC_TYPE_CHOICE
+                WHEN 'D' THEN '단과' WHEN 'J' THEN '종합' WHEN 'N' THEN '선택' WHEN 'P' THEN '패키지' ELSE ''
+            END KDTYPE,
+            '' SUBJECT_TEACHER_NM,
+            B.SUBJECT_TITLE, B.SUBJECT_DISCOUNT, B.SUBJECT_PRICE, B.CATEGORY_CD, B.LEARNING_CD, B.REC_GUBUN, B.LEC_GUBUN, B.SUBJECT_SJT_CD,
+            IFNULL(CASE WHEN A.GIFT_YN = 'Y' THEN 0 ELSE A.PRICE END, 0) DISCOUNT_PRICE,
+            B.LEC_TYPE_CHOICE,
+            A.STATUSCODE,
+            CASE A.STATUSCODE
+                WHEN 'DLV105' THEN '입금완료' WHEN 'DLV100' THEN '입금대기중' WHEN 'DLV110' THEN '배송준비중'
+                WHEN 'DLV120' THEN '배송중' WHEN 'DLV130' THEN '배송완료' WHEN 'DLV140' THEN '취소요청'
+                WHEN 'DLV150' THEN '취소완료' WHEN 'DLV160' THEN '교환요청' WHEN 'DLV170' THEN '교환배송중'
+                WHEN 'DLV180' THEN '교환완료' WHEN 'DLV220' THEN '환불요청' WHEN 'DLV230' THEN '환불완료' ELSE ' '
+            END STATUS_NM,
+            A.CONFIRMDATE, DATE_FORMAT(A.CONFIRMDATE, '%Y-%m-%d %H:%i:%s') AS CONFIRMDATE_DD,
+            CASE WHEN A.GIFT_YN = 'Y' THEN 'Y' ELSE 'N' END AS GIFT_YN,
+            CASE
+                WHEN BB.PAYCODE = 'PAY120' THEN
+                    CASE A.STATUSCODE
+                        WHEN 'DLV100' THEN IFNULL(BB.INPUT_DT, DATE_FORMAT(DATE_ADD(BB.REG_DT, INTERVAL 7 DAY), '%Y.%m.%d'))
+                        WHEN 'DLV105' THEN DATE_FORMAT((SELECT DD7.IPDATE FROM TB_ORDERS DD7 WHERE DD7.ORDERNO = A.ORDERNO LIMIT 1), '%Y.%m.%d')
+                        ELSE ''
+                    END
+                ELSE ''
+            END STATUS_DT
+        FROM TB_APPROVALS BB, TB_ORDER_MGNT_NO A
+        INNER JOIN TB_LEC_MST B ON A.MGNTNO = B.LECCODE
+        WHERE A.ORDERNO = BB.ORDERNO
+            AND B.LEC_TYPE_CHOICE IN ('J', 'N', 'P', 'C', 'Y')
+            AND A.ORDERNO = #{ORDERNO}
+    </select>
+
+    <!-- 온라인 도서 주문 상세 조회 -->
+    <select id="orderDetailBookOnlist" parameterType="hashMap" resultType="hashMap">
+        SELECT
+            A.ORDERNO, C.USER_ID, A.MGNTNO, A.CNT, A.PTYPE, B.RSC_ID,
+            B.BOOK_MAIN, B.BOOK_SUB, B.BOOK_STUDENTBOOK, B.BOOK_AUTHOR, B.BOOK_PUBLISHERS,
+            (SELECT SUBSTRING(NAME, 1, 2) FROM TB_LEARNING_FORM_INFO WHERE CODE = B.LEARNING_CD) AS LRNTYPE,
+            B.BOOK_NM, B.CATEGORY_CD, B.LEARNING_CD, B.COVER_TYPE, B.SUBJECT_SJT_CD, B.PRICE, B.DISCOUNT, A.PRICE DISCOUNT_PRICE,
+            A.STATUSCODE,
+            (SELECT SENDNO FROM TB_DELIVERS WHERE ORDERNO = A.ORDERNO LIMIT 1) SENDNO,
+            CASE A.STATUSCODE
+                WHEN 'DLV105' THEN '입금완료' WHEN 'DLV100' THEN '입금대기중' WHEN 'DLV110' THEN '배송준비중'
+                WHEN 'DLV120' THEN '배송중' WHEN 'DLV130' THEN '배송완료' WHEN 'DLV140' THEN '취소요청'
+                WHEN 'DLV150' THEN '취소완료' WHEN 'DLV160' THEN '교환요청' WHEN 'DLV170' THEN '교환배송중'
+                WHEN 'DLV180' THEN '교환완료' WHEN 'DLV220' THEN '환불요청' WHEN 'DLV230' THEN '환불완료'
+                WHEN 'DLV125' THEN '발송완료' ELSE ' '
+            END STATUS_NM,
+            A.CONFIRMDATE, DATE_FORMAT(A.CONFIRMDATE, '%Y-%m-%d %H:%i:%s') AS CONFIRMDATE_DD,
+            CASE
+                WHEN BB.PAYCODE = 'PAY120' THEN
+                    CASE A.STATUSCODE
+                        WHEN 'DLV100' THEN IFNULL(BB.INPUT_DT, DATE_FORMAT(DATE_ADD(BB.REG_DT, INTERVAL 7 DAY), '%Y.%m.%d'))
+                        WHEN 'DLV105' THEN DATE_FORMAT((SELECT DD8.IPDATE FROM TB_ORDERS DD8 WHERE DD8.ORDERNO = A.ORDERNO LIMIT 1), '%Y.%m.%d')
+                        ELSE ''
+                    END
+                ELSE ''
+            END STATUS_DT
+        FROM TB_APPROVALS BB, TB_ORDER_MGNT_NO A
+        INNER JOIN TB_CA_BOOK B ON A.MGNTNO = B.RSC_ID AND B.USE_YN = 'Y' AND A.PTYPE = 'L'
+        INNER JOIN TB_ORDERS C ON A.ORDERNO = C.ORDERNO
+        WHERE BB.ORDERNO = A.ORDERNO AND A.ORDERNO = #{ORDERNO}
+    </select>
+
+    <!-- 오프라인 강좌 주문 상세 조회 -->
+    <select id="orderDetailLectureOfflist" parameterType="hashMap" resultType="hashMap">
+        SELECT
+            A.ORDERNO, B.LECCODE, A.PTYPE, A.WMV_PMP, A.ISCONFIRM, B.SUBJECT_TEACHER,
+            (SELECT SUBSTRING(NAME, 1, 2) FROM TB_LEARNING_FORM_INFO WHERE CODE = B.LEARNING_CD) AS LRNTYPE,
+            CASE B.LEC_TYPE_CHOICE
+                WHEN 'D' THEN '단과' WHEN 'J' THEN '종합' WHEN 'N' THEN '선택' WHEN 'P' THEN '패키지' ELSE ''
+            END KDTYPE,
+            (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = B.SUBJECT_TEACHER) SUBJECT_TEACHER_NM,
+            B.SUBJECT_TITLE, B.SUBJECT_DISCOUNT, B.SUBJECT_PRICE, B.CATEGORY_CD, B.LEARNING_CD, B.REC_GUBUN, B.LEC_GUBUN, B.SUBJECT_SJT_CD,
+            A.PRICE DISCOUNT_PRICE,
+            B.LEC_TYPE_CHOICE,
+            A.STATUSCODE,
+            CASE A.STATUSCODE
+                WHEN 'DLV105' THEN '입금완료' WHEN 'DLV100' THEN '입금대기중' WHEN 'DLV110' THEN '배송준비중'
+                WHEN 'DLV120' THEN '배송중' WHEN 'DLV130' THEN '배송완료' WHEN 'DLV140' THEN '취소요청'
+                WHEN 'DLV150' THEN '취소완료' WHEN 'DLV160' THEN '교환요청' WHEN 'DLV170' THEN '교환배송중'
+                WHEN 'DLV180' THEN '교환완료' WHEN 'DLV220' THEN '환불요청' WHEN 'DLV230' THEN '환불완료' ELSE ' '
+            END STATUS_NM,
+            A.REG_DT, DATE_FORMAT(A.REG_DT, '%Y-%m-%d %H:%i:%s') AS CONFIRMDATE_DD
+        FROM TB_OFF_ORDER_MGNT_NO A
+        INNER JOIN TB_OFF_LEC_MST B ON A.MGNTNO = B.LECCODE
+        WHERE B.LEC_TYPE_CHOICE = 'D'
+            AND A.ORDERNO = #{ORDERNO}
+
+        UNION ALL
+
+        SELECT
+            A.ORDERNO, B.LECCODE, A.PTYPE, A.WMV_PMP, A.ISCONFIRM, '' SUBJECT_TEACHER,
+            (SELECT SUBSTRING(NAME, 1, 2) FROM TB_LEARNING_FORM_INFO WHERE CODE = B.LEARNING_CD) AS LRNTYPE,
+            CASE B.LEC_TYPE_CHOICE
+                WHEN 'D' THEN '단과' WHEN 'J' THEN '종합' WHEN 'N' THEN '선택' WHEN 'P' THEN '패키지' ELSE ''
+            END KDTYPE,
+            '' SUBJECT_TEACHER_NM,
+            B.SUBJECT_TITLE, B.SUBJECT_DISCOUNT, B.SUBJECT_PRICE, B.CATEGORY_CD, B.LEARNING_CD, B.REC_GUBUN, B.LEC_GUBUN, B.SUBJECT_SJT_CD,
+            A.PRICE DISCOUNT_PRICE,
+            B.LEC_TYPE_CHOICE,
+            A.STATUSCODE,
+            CASE A.STATUSCODE
+                WHEN 'DLV105' THEN '입금완료' WHEN 'DLV100' THEN '입금대기중' WHEN 'DLV110' THEN '배송준비중'
+                WHEN 'DLV120' THEN '배송중' WHEN 'DLV130' THEN '배송완료' WHEN 'DLV140' THEN '취소요청'
+                WHEN 'DLV150' THEN '취소완료' WHEN 'DLV160' THEN '교환요청' WHEN 'DLV170' THEN '교환배송중'
+                WHEN 'DLV180' THEN '교환완료' WHEN 'DLV220' THEN '환불요청' WHEN 'DLV230' THEN '환불완료' ELSE ' '
+            END STATUS_NM,
+            A.CONFIRMDATE, DATE_FORMAT(A.CONFIRMDATE, '%Y-%m-%d %H:%i:%s') AS CONFIRMDATE_DD
+        FROM TB_OFF_ORDER_MGNT_NO A
+        INNER JOIN TB_OFF_LEC_MST B ON A.MGNTNO = B.LECCODE
+        WHERE B.LEC_TYPE_CHOICE IN ('J', 'N', 'P', 'C', 'Y')
+            AND A.ORDERNO = #{ORDERNO}
+    </select>
+
+    <!-- 사물함 주문 상세 조회 -->
+    <select id="orderDetailBoxlist" parameterType="hashMap" resultType="hashMap">
+        SELECT
+            A.ORDERNO, A.MGNTNO, A.PTYPE, A.ISCONFIRM,
+            CASE A.PTYPE
+                WHEN 'D' THEN '단과' WHEN 'J' THEN '종합' WHEN 'N' THEN '선택형' WHEN 'P' THEN '패키지'
+                WHEN 'Y' THEN '연회원패키지' WHEN 'L' THEN '교재' WHEN 'C' THEN '선택'
+                WHEN 'S' THEN '사물함' WHEN 'T' THEN '독서실' WHEN 'F' THEN '무료특강' ELSE ''
+            END KDTYPE,
+            A.PRICE DISCOUNT_PRICE, B.BOX_NUM,
+            (SELECT BOX_NM FROM TB_OFF_BOX WHERE BOX_CD = B.BOX_CD) AS BOX_NM,
+            A.STATUSCODE,
+            CASE A.STATUSCODE
+                WHEN 'DLV105' THEN '입금완료' WHEN 'DLV100' THEN '입금대기중' WHEN 'DLV110' THEN '배송준비중'
+                WHEN 'DLV120' THEN '배송중' WHEN 'DLV130' THEN '배송완료' WHEN 'DLV140' THEN '취소요청'
+                WHEN 'DLV150' THEN '취소완료' WHEN 'DLV160' THEN '교환요청' WHEN 'DLV170' THEN '교환배송중'
+                WHEN 'DLV180' THEN '교환완료' WHEN 'DLV220' THEN '환불요청' WHEN 'DLV230' THEN '환불완료' ELSE ' '
+            END STATUS_NM,
+            A.CONFIRMDATE, DATE_FORMAT(A.CONFIRMDATE, '%Y-%m-%d %H:%i:%s') AS CONFIRMDATE_DD
+        FROM TB_OFF_ORDER_MGNT_NO A
+        INNER JOIN TB_OFF_BOX_RENT B ON A.ORDERNO = B.ORDERNO
+        WHERE A.PTYPE = 'S' AND ISCANCEL = 0
+            AND A.ORDERNO = #{ORDERNO}
+        ORDER BY A.ORDERNO, ISCONFIRM ASC
+    </select>
+
+    <!-- 독서실 주문 상세 조회 -->
+    <select id="orderDetailRoomlist" parameterType="hashMap" resultType="hashMap">
+        SELECT
+            A.ORDERNO, A.MGNTNO, A.PTYPE, A.ISCONFIRM,
+            CASE A.PTYPE
+                WHEN 'D' THEN '단과' WHEN 'J' THEN '종합' WHEN 'N' THEN '선택형' WHEN 'P' THEN '패키지'
+                WHEN 'Y' THEN '연회원패키지' WHEN 'L' THEN '교재' WHEN 'C' THEN '선택'
+                WHEN 'S' THEN '사물함' WHEN 'T' THEN '독서실' ELSE ''
+            END KDTYPE,
+            A.PRICE DISCOUNT_PRICE,
+            A.STATUSCODE,
+            CASE A.STATUSCODE
+                WHEN 'DLV105' THEN '입금완료' WHEN 'DLV100' THEN '입금대기중' WHEN 'DLV110' THEN '배송준비중'
+                WHEN 'DLV120' THEN '배송중' WHEN 'DLV130' THEN '배송완료' WHEN 'DLV140' THEN '취소요청'
+                WHEN 'DLV150' THEN '취소완료' WHEN 'DLV160' THEN '교환요청' WHEN 'DLV170' THEN '교환배송중'
+                WHEN 'DLV180' THEN '교환완료' WHEN 'DLV220' THEN '환불요청' WHEN 'DLV230' THEN '환불완료' ELSE ' '
+            END STATUS_NM
+        FROM TB_OFF_ORDER_MGNT_NO A
+        INNER JOIN TB_OFF_ROOM_RENT B ON A.ORDERNO = B.ORDER_ID
+        WHERE A.PTYPE = 'T' AND ISCANCEL = 0
+            AND A.ORDERNO = #{ORDERNO}
+        ORDER BY A.ORDERNO, ISCONFIRM ASC
+    </select>
+
+    <!-- 모의고사 주문 상세 조회 -->
+    <select id="tOrderDetailList" parameterType="hashMap" resultType="hashMap">
+        SELECT
+            A.ORDERNO, B.MOCKCODE, 'E' PTYPE, '' WMV_PMP, '' ISCONFIRM, '' SUBJECT_TEACHER,
+            '모의고사' AS LRNTYPE, '' KDTYPE, '' SUBJECT_TEACHER_NM,
+            B.MOCKNAME AS SUBJECT_TITLE, B.DISCOUNTRATIO AS SUBJECT_DISCOUNT, B.EXAMCOST AS SUBJECT_PRICE,
+            A.CLASSCODE AS CATEGORY_CD, A.CLASSSERIESCODE AS LEARNING_CD,
+            CONCAT(A.RECEIPTTYPE, '') AS REC_GUBUN, CONCAT(A.EXAMTYPE, '') AS LEC_GUBUN, '' SUBJECT_SJT_CD,
+            B.SALEAMOUNTS AS DISCOUNT_PRICE,
+            'E' AS LEC_TYPE_CHOICE,
+            CONCAT(A.PAYMENTSTATE, '') AS STATUSCODE,
+            CASE A.PAYMENTSTATE
+                WHEN 0 THEN '입금대기중' WHEN 1 THEN '입금완료' WHEN 2 THEN '환불완료' WHEN 3 THEN '취소완료' ELSE ' '
+            END STATUS_NM,
+            A.PAYMENTDUEDATE
+        FROM TB_TORDERS A
+        INNER JOIN TB_TMOCKREGISTRATION BB ON A.EXAMCODE = BB.MOCKCODE
+        INNER JOIN TB_TMOCKREGISTRATION B ON A.EXAMCODE = B.MOCKCODE
+        WHERE A.ORDERNO = #{ORDERNO}
+    </select>
+
+    <!-- 온라인 주문 정보 조회 -->
+    <select id="getOrdersOn" parameterType="hashMap" resultType="hashMap">
+        SELECT A.*, DATE_FORMAT(A.REG_DT, '%Y-%m-%d %H:%i:%s') AS REG_DD
+        FROM TB_ORDERS A
+        WHERE ORDERNO = #{ORDERNO}
+    </select>
+
+    <!-- 온라인 결제 정보 조회 -->
+    <select id="getApprovalsOn" parameterType="hashMap" resultType="hashMap">
+        SELECT
+            ORDERNO, PRICE, ADDPRICE,
+            PAYCODE,
+            (SELECT CODE_NM FROM TB_COMMON_CODE WHERE CODE_TYPE = 'PAYMENT_CODE' AND CODE = A.PAYCODE) PAYCODE_NM,
+            ACCTNOCODE, PAYNAME, POINT, RETURNVALUE, REG_DT,
+            BANNER_NAME, REPRICE, REPRICEDATE, ORDERURL,
+            VCDBANK,
+            (SELECT CODE_NM FROM TB_COMMON_CODE WHERE CODE_TYPE = 'BANK' AND CODE = A.VCDBANK) VCDBANK_NM,
+            VACCT, VACCT_NAME, REFUND_POINT,
+            (SELECT MAX(STATUSCODE) FROM TB_ORDER_MGNT_NO WHERE ORDERNO = A.ORDERNO) STATUSCD,
+            (SELECT CODE_NM FROM TB_COMMON_CODE WHERE CODE_TYPE = 'ORDER_STATUSCODE' AND CODE = (SELECT MAX(STATUSCODE) FROM TB_ORDER_MGNT_NO WHERE ORDERNO = A.ORDERNO)) STATUS_NM
+        FROM TB_APPROVALS A
+        WHERE ORDERNO = #{ORDERNO}
+    </select>
+
+    <!-- 오프라인 주문 정보 조회 -->
+    <select id="getOrdersOff" parameterType="hashMap" resultType="hashMap">
+        SELECT A.*, DATE_FORMAT(A.REG_DT, '%Y-%m-%d %H:%i:%s') AS REG_DD
+        FROM TB_OFF_ORDERS A
+        WHERE ORDERNO = #{ORDERNO}
+    </select>
+
+    <!-- 오프라인 결제 정보 조회 -->
+    <select id="getApprovalsOff" parameterType="hashMap" resultType="hashMap">
+        SELECT
+            ORDERNO, PRICE, ADDPRICE, PAYCODE,
+            CASE PAYCODE
+                WHEN 'PAY100' THEN '무료수강' WHEN 'PAY110' THEN '카드결제' WHEN 'PAY120' THEN '무통장입금'
+                WHEN 'PAY130' THEN '계좌이체' WHEN 'PAY140' THEN '현금' WHEN 'PAY150' THEN '예금' ELSE ''
+            END PAYCODE_NM,
+            ACCTNOCODE, PAYNAME, POINT, RETURNVALUE, REG_DT,
+            BANNER_NAME, REPRICE, REPRICEDATE, ORDERURL,
+            VCDBANK,
+            CASE VCDBANK
+                WHEN '03' THEN '기업은행' WHEN '05' THEN '외환은행' WHEN '06' THEN '국민은행'
+                WHEN '11' THEN '농협' WHEN '81' THEN '하나은행' WHEN '07' THEN '수협'
+                WHEN '20' THEN '우리은행' WHEN '26' THEN '신한은행' WHEN '39' THEN '경남은행'
+                WHEN '71' THEN '우체국' WHEN '32' THEN '부산은행' WHEN '31' THEN '대구은행' ELSE ''
+            END VCDBANK_NM,
+            VACCT, VACCT_NAME, REFUND_POINT
+        FROM TB_OFF_APPROVALS
+        WHERE ORDERNO = #{ORDERNO}
+    </select>
+
+    <!-- 모의고사 주문 정보 조회 -->
+    <select id="getTOrders" parameterType="hashMap" resultType="hashMap">
+        SELECT *
+        FROM TB_TORDERS
+        WHERE ORDERNO = #{ORDERNO}
+    </select>
+
+    <!-- 모의고사 결제 정보 조회 -->
+    <select id="getTApprovals" parameterType="hashMap" resultType="hashMap">
+        SELECT
+            B.ORDERNO,
+            A.PAYMENTAMOUNT AS PRICE,
+            0 AS ADDPRICE,
+            A.PAYMENTTYPE AS PAYCODE,
+            CASE A.PAYMENTTYPE
+                WHEN 0 THEN '카드결제' WHEN 1 THEN '현금' WHEN 2 THEN '계좌이체' WHEN 3 THEN '가상계좌' ELSE ''
+            END PAYCODE_NM,
+            '' ACCTNOCODE, '' PAYNAME, 0 POINT, '' RETURNVALUE, A.REG_DT,
+            '' BANNER_NAME, 0 REPRICE, NULL REPRICEDATE, '' ORDERURL,
+            A.CARDKIND AS VCDBANK, A.CARDKIND AS VCDBANK_NM,
+            '' VACCT, '' VACCT_NAME, 0 REFUND_POINT
+        FROM TB_TAPPROVALS A, TB_TORDERS B
+        WHERE A.IDENTYID = B.IDENTYID
+            AND B.ORDERNO = #{ORDERNO}
+    </select>
+
+    <!-- 배송 정보 조회 -->
+    <select id="getDelivers" parameterType="hashMap" resultType="hashMap">
+        SELECT * FROM (
+            SELECT
+                A.ORDERNO, A.SENDNO, A.USERNAME, A.TELNO, A.CELLNO, A.ZIPCD, A.ADDR, A.MEMO, A.REGDATE, A.SENDDATE, A.DLEORDER, A.CHARGE,
+                CASE B.STATUSCODE
+                    WHEN 'DLV120' THEN 1 WHEN 'DLV125' THEN 2 WHEN 'DLV130' THEN 3 WHEN 'DLV110' THEN 4 ELSE 5
+                END AS RNK,
+                CASE
+                    WHEN A.SENDDATE <![CDATA[<]]> '2015-07-01' THEN 'T'
+                    WHEN A.SENDDATE <![CDATA[<]]> '2016-12-01' THEN 'H'
+                    ELSE 'T'
+                END DLV_COMP
+            FROM TB_DELIVERS A, TB_ORDER_MGNT_NO B
+            WHERE A.ORDERNO = B.ORDERNO
+                AND A.ORDERNO = #{ORDERNO}
+            GROUP BY A.ORDERNO, A.SENDNO, A.USERNAME, A.TELNO, A.CELLNO, A.ZIPCD, A.ADDR, A.MEMO, A.REGDATE, A.SENDDATE, A.DLEORDER, A.CHARGE, B.STATUSCODE
+            ORDER BY RNK ASC
+        ) T
+        LIMIT 1
+    </select>
+
+    <!-- 도서 배송 목록 조회 -->
+    <select id="bookDeliveryOnlist" parameterType="hashMap" resultType="hashMap">
+        SELECT
+            TA.ORDERNO, TA.SENDNO, DATE_FORMAT(TA.REGDATE, '%Y-%m-%d') REG_DT, TA.DLEORDER, TA.SENDDATE, TC.STATUSCODE, TC.BCNT - 1 BOOKCNT,
+            (SELECT BOOK_NM FROM TB_CA_BOOK WHERE RSC_ID = TC.MGNTNO) BOOK_NM, TC.STATUSCODE,
+            CASE
+                WHEN TA.SENDDATE <![CDATA[<]]> '2015-07-01' THEN 'T'
+                WHEN TA.SENDDATE <![CDATA[<]]> '2016-12-01' THEN 'H'
+                ELSE 'T'
+            END DLV_COMP,
+            CASE TC.STATUSCODE
+                WHEN 'DLV105' THEN '입금완료' WHEN 'DLV100' THEN '입금확인중' WHEN 'DLV110' THEN '배송준비중'
+                WHEN 'DLV120' THEN '배송중' WHEN 'DLV130' THEN '배송완료' WHEN 'DLV140' THEN '취소요청'
+                WHEN 'DLV150' THEN '취소완료' WHEN 'DLV160' THEN '교환요청' WHEN 'DLV170' THEN '교환배송중'
+                WHEN 'DLV180' THEN '교환완료' WHEN 'DLV220' THEN '환불요청' WHEN 'DLV230' THEN '환불완료' ELSE ' '
+            END STATUS_NM
+        FROM TB_DELIVERS TA
+        INNER JOIN TB_ORDERS TB ON TA.ORDERNO = TB.ORDERNO
+        INNER JOIN (
+            SELECT ORDERNO, MIN(MGNTNO) MGNTNO, MIN(STATUSCODE) STATUSCODE, COUNT(*) BCNT
+            FROM TB_ORDER_MGNT_NO
+            WHERE PTYPE = 'L'
+            GROUP BY ORDERNO
+        ) TC ON TB.ORDERNO = TC.ORDERNO
+        WHERE TB.USER_ID = #{USER_ID}
+        ORDER BY REG_DT DESC
+    </select>
+
+    <!-- 배송 정보 수정 -->
+    <update id="updateDeliverInfo" parameterType="hashMap">
+        UPDATE TB_DELIVERS SET
+            ORDERNO = #{ORDERNO},
+            USERNAME = #{USERNAME}
+            <if test='TELNO != null and TELNO != ""'>
+                , TELNO = #{TELNO}
+            </if>
+            , CELLNO = #{CELLNO}
+            , ZIPCD = #{ZIPCD}
+            , ADDR = #{ADDR}
+        WHERE ORDERNO = #{ORDERNO}
+    </update>
+
+    <!-- 사용자 취소 가능 여부 조회 -->
+    <select id="getUserCancelYN" parameterType="hashMap" resultType="String">
+        SELECT
+            CASE
+                WHEN DATE_FORMAT((SELECT DD9.IPDATE FROM TB_ORDERS DD9 WHERE DD9.ORDERNO = A.ORDERNO LIMIT 1), '%Y%m%d') = DATE_FORMAT(NOW(), '%Y%m%d')
+                    AND (SELECT IFNULL(COUNT(EE.ORDERNO), 0) FROM TB_MYMOVIE EE WHERE EE.ORDERNO = A.ORDERNO) = 0
+                    AND (SELECT IFNULL(COUNT(EE.ORDERNO), 0) FROM TB_MOBILE_DOWNLOG EE WHERE EE.ORDERNO = A.ORDERNO) = 0
+                    AND (SELECT IFNULL(COUNT(EE.IDX), 0) FROM TB_PMP_DOWNLOG EE WHERE INSTR(EE.DOWNLOGINFO, A.ORDERNO) > 0) = 0
+                    AND (SELECT IFNULL(COUNT(FF.MGNTNO), 0) FROM TB_ORDER_MGNT_NO FF WHERE FF.ORDERNO = A.ORDERNO AND PTYPE = 'L') = 0
+                    AND (SELECT IFNULL(COUNT(MM.ORDERNO), 0) FROM TB_MYMOVIE_LOG MM WHERE MM.ORDERNO = A.ORDERNO) = 0
+                THEN 'Y'
+                ELSE 'N'
+            END AS CANCEL_YN
+        FROM TB_ORDERS A
+        WHERE A.ORDERNO = #{ORDERNO}
+            AND A.USER_ID = #{USER_ID}
+    </select>
+
+</mapper>

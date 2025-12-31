@@ -1,0 +1,445 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.academy.mapper.BoardMapper">
+
+    <resultMap type="java.util.HashMap" id="boardMap">
+        <result column="CONTENT" property="CONTENT" javaType="java.lang.String" jdbcType="LONGVARCHAR"/>
+        <result column="ANSWER" property="ANSWER" javaType="java.lang.String" jdbcType="LONGVARCHAR"/>
+        <result column="ORIGIN" property="ORIGIN" javaType="java.lang.String" jdbcType="LONGVARCHAR"/>
+    </resultMap>
+
+    <!-- 게시판 정보 조회 -->
+    <select id="getBoardInfo" parameterType="hashMap" resultType="hashMap">
+        SELECT * FROM TB_BOARD_MNG
+        WHERE BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+    </select>
+
+    <!-- 게시판 정보 리스트 조회 -->
+    <select id="getBoardInfoList" parameterType="hashMap" resultType="hashMap">
+        SELECT * FROM TB_BOARD_MNG
+        WHERE 1 = 1
+        <if test="BRD_MNG_LIST != null and BRD_MNG_LIST.length > 0">
+            AND BOARD_MNG_SEQ IN
+            <foreach collection="BRD_MNG_LIST" item="item" index="index" open="(" separator="," close=")">
+                #{item}
+            </foreach>
+        </if>
+    </select>
+
+    <!-- 메인 게시판 리스트 조회 (Oracle ROW_NUMBER -> MariaDB ROW_NUMBER) -->
+    <select id="getMainBoardList" parameterType="hashMap" resultType="hashMap">
+        SELECT BOARD_SEQ, SUBJECT, CATEGORY_CODE, REG_DT
+        FROM (
+            <choose>
+                <when test='topMenu == "MAIN" and topMenuType == "F" and BOARD_MNG_SEQ == "NOTICE_000"'>
+                    SELECT A.BOARD_SEQ, A.SUBJECT, B.CATEGORY_CODE,
+                           DATE_FORMAT(A.REG_DT, '%Y-%m-%d') AS REG_DT,
+                           ROW_NUMBER() OVER (PARTITION BY B.CATEGORY_CODE ORDER BY A.REG_DT DESC) AS CATEGORY_CODE_ORDER
+                    FROM TB_BOARD A
+                    INNER JOIN TB_BOARD_CATEGORY_INFO B ON A.BOARD_SEQ = B.BOARD_SEQ AND A.BOARD_MNG_SEQ = B.BOARD_MNG_SEQ
+                    WHERE A.BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+                    AND A.OPEN_YN = 'Y'
+                    AND A.CATEGORY_CODE = 'Y'
+                    AND B.CATEGORY_CODE IN ('001', '002', '005', '018', '009')
+                </when>
+                <otherwise>
+                    SELECT A.BOARD_SEQ, A.SUBJECT, B.CATEGORY_CODE,
+                           DATE_FORMAT(A.REG_DT, '%Y-%m-%d') AS REG_DT,
+                           ROW_NUMBER() OVER (PARTITION BY A.BOARD_SEQ ORDER BY A.REG_DT DESC) AS CATEGORY_CODE_ORDER
+                    FROM TB_BOARD A
+                    INNER JOIN TB_BOARD_CATEGORY_INFO B ON A.BOARD_SEQ = B.BOARD_SEQ AND A.BOARD_MNG_SEQ = B.BOARD_MNG_SEQ
+                    WHERE A.BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+                    AND A.OPEN_YN = 'Y'
+                    <if test='topMenu != "MAIN" and topMenu != null and topMenu != ""'>
+                        AND B.CATEGORY_CODE = #{topMenu}
+                    </if>
+                </otherwise>
+            </choose>
+        ) AS sub
+        WHERE CATEGORY_CODE_ORDER = 1
+        LIMIT 5
+    </select>
+
+    <!-- 게시판 리스트 조회 (Oracle ROWNUM, CONNECT BY -> MariaDB LIMIT OFFSET) -->
+    <select id="boardList" parameterType="hashMap" resultType="hashMap">
+        SELECT
+            CODENAME,
+            BOARD_SEQ,
+            SUBJECT,
+            FILE_PATH,
+            FILE_NAME,
+            PARENT_BOARD_SEQ,
+            NOTICE_TOP_YN,
+            HITS,
+            REG_DT,
+            USER_NM,
+            UPD_DT,
+            UPD_ID,
+            CREATENAME,
+            THUMBNAIL_FILE_PATH,
+            THUMBNAIL_FILE_NAME,
+            THUMBNAIL_FILE_REAL_NAME,
+            VOTINGY_CNT,
+            MEMO_CNT,
+            NEW_YN,
+            EXAM_TYPE,
+            EXAM_AREA,
+            EXAM_TYPE_NM,
+            EXAM_AREA_NM
+        FROM (
+            SELECT DISTINCT
+                (SELECT NAME FROM TB_CATEGORY_INFO WHERE CODE = #{topMenu}) AS CODENAME,
+                bb.BOARD_SEQ,
+                bb.SUBJECT,
+                bb.FILE_PATH,
+                (SELECT FILE_NAME FROM TB_BOARD_FILE WHERE BOARD_SEQ = bb.BOARD_SEQ LIMIT 1) AS FILE_NAME,
+                bb.PARENT_BOARD_SEQ,
+                bb.NOTICE_TOP_YN,
+                bb.HITS,
+                DATE_FORMAT(bb.REG_DT, '%Y-%m-%d') AS REG_DT,
+                (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = bb.REG_ID) AS USER_NM,
+                DATE_FORMAT(bb.UPD_DT, '%Y-%m-%d') AS UPD_DT,
+                bb.UPD_ID,
+                CONCAT(LEFT(bb.CREATENAME, 4), '*') AS CREATENAME,
+                bb.THUMBNAIL_FILE_PATH,
+                bb.THUMBNAIL_FILE_NAME,
+                bb.THUMBNAIL_FILE_REAL_NAME,
+                (SELECT COUNT(VOTING) FROM TB_BOARD_VOTING
+                 WHERE BOARD_MNG_SEQ = bb.BOARD_MNG_SEQ AND BOARD_SEQ = bb.BOARD_SEQ
+                 AND ISTYPE = 'R' AND VOTING = 'Y') AS VOTINGY_CNT,
+                (SELECT COUNT(SEQ) FROM TB_BOARD_COMMENT
+                 WHERE BOARD_MNG_SEQ = bb.BOARD_MNG_SEQ AND BOARD_SEQ = bb.BOARD_SEQ) AS MEMO_CNT,
+                CASE WHEN DATEDIFF(CURDATE(), DATE(bb.REG_DT)) <![CDATA[ <= ]]> 10 THEN 'Y' ELSE 'N' END AS NEW_YN,
+                bb.EXAM_TYPE,
+                bb.EXAM_AREA,
+                (SELECT CODE_NM FROM TB_BA_CONFIG_CD WHERE SYS_CD = 'PUB_TYPE' AND CODE_VAL = bb.EXAM_TYPE) AS EXAM_TYPE_NM,
+                (SELECT CODE_NM FROM TB_BA_CONFIG_CD WHERE SYS_CD = 'PUB_AREA' AND CODE_VAL = bb.EXAM_AREA) AS EXAM_AREA_NM
+            FROM TB_BOARD_CATEGORY_INFO aa
+            INNER JOIN TB_BOARD bb ON aa.BOARD_MNG_SEQ = bb.BOARD_MNG_SEQ AND aa.BOARD_SEQ = bb.BOARD_SEQ
+            INNER JOIN TB_BOARD_MNG cc ON cc.BOARD_MNG_SEQ = aa.BOARD_MNG_SEQ
+            WHERE bb.OPEN_YN = 'Y'
+            AND aa.BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+            AND bb.BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+            AND cc.BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+            <if test='topMenu != null and topMenu != "" and topMenu != "MAIN"'>
+                AND aa.CATEGORY_CODE = #{topMenu}
+            </if>
+            <if test='topMenuType == "F" and topMenu == "MAIN"'>
+                AND aa.CATEGORY_CODE != '018'
+            </if>
+            <if test="SCH_EXAM_TYPE != null and SCH_EXAM_TYPE != ''">
+                AND bb.EXAM_TYPE = #{SCH_EXAM_TYPE}
+            </if>
+            <if test="SCH_EXAM_AREA != null and SCH_EXAM_AREA != ''">
+                AND bb.EXAM_AREA = #{SCH_EXAM_AREA}
+            </if>
+            <if test="SEARCHTEXT != null and SEARCHTEXT != ''">
+                <choose>
+                    <when test='SEARCHKIND == "SEARCHSUBJECT"'>
+                        AND bb.SUBJECT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                    </when>
+                    <when test='SEARCHKIND == "SEARCHCONTENT"'>
+                        AND bb.CONTENT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                    </when>
+                    <otherwise>
+                        AND (bb.SUBJECT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                             OR bb.CONTENT LIKE CONCAT('%', #{SEARCHTEXT}, '%'))
+                    </otherwise>
+                </choose>
+            </if>
+            <if test="DIVICE_TYPE != null and DIVICE_TYPE != ''">
+                <choose>
+                    <when test='DIVICE_TYPE == "PC"'>
+                        AND (bb.DIVICE_TYPE = '1' OR bb.DIVICE_TYPE = '3')
+                    </when>
+                    <when test='DIVICE_TYPE == "MO"'>
+                        AND (bb.DIVICE_TYPE = '2' OR bb.DIVICE_TYPE = '3')
+                    </when>
+                    <otherwise>
+                        AND (bb.DIVICE_TYPE = '1' OR bb.DIVICE_TYPE = '2' OR bb.DIVICE_TYPE = '3')
+                    </otherwise>
+                </choose>
+            </if>
+        ) AS result
+        ORDER BY NOTICE_TOP_YN DESC, BOARD_SEQ DESC
+        LIMIT #{recordCountPerPage} OFFSET #{firstIndex}
+    </select>
+
+    <!-- 게시판 리스트 건수 조회 -->
+    <select id="boardListCount" parameterType="hashMap" resultType="int">
+        SELECT COUNT(DISTINCT bb.BOARD_SEQ) AS CNT
+        FROM TB_BOARD_CATEGORY_INFO aa
+        INNER JOIN TB_BOARD bb ON aa.BOARD_MNG_SEQ = bb.BOARD_MNG_SEQ AND aa.BOARD_SEQ = bb.BOARD_SEQ
+        INNER JOIN TB_BOARD_MNG cc ON cc.BOARD_MNG_SEQ = aa.BOARD_MNG_SEQ
+        WHERE bb.OPEN_YN = 'Y'
+        AND aa.BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+        AND bb.BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+        AND cc.BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+        <if test='topMenu != null and topMenu != "" and topMenu != "MAIN"'>
+            AND aa.CATEGORY_CODE = #{topMenu}
+        </if>
+        <if test="SCH_EXAM_TYPE != null and SCH_EXAM_TYPE != ''">
+            AND bb.EXAM_TYPE = #{SCH_EXAM_TYPE}
+        </if>
+        <if test="SCH_EXAM_AREA != null and SCH_EXAM_AREA != ''">
+            AND bb.EXAM_AREA = #{SCH_EXAM_AREA}
+        </if>
+        <if test="SEARCHTEXT != null and SEARCHTEXT != ''">
+            <choose>
+                <when test='SEARCHKIND == "SEARCHSUBJECT"'>
+                    AND bb.SUBJECT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                </when>
+                <when test='SEARCHKIND == "SEARCHCONTENT"'>
+                    AND bb.CONTENT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                </when>
+                <otherwise>
+                    AND (bb.SUBJECT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                         OR bb.CONTENT LIKE CONCAT('%', #{SEARCHTEXT}, '%'))
+                </otherwise>
+            </choose>
+        </if>
+        <if test="DIVICE_TYPE != null and DIVICE_TYPE != ''">
+            <choose>
+                <when test='DIVICE_TYPE == "PC"'>
+                    AND (bb.DIVICE_TYPE = '1' OR bb.DIVICE_TYPE = '3')
+                </when>
+                <when test='DIVICE_TYPE == "MO"'>
+                    AND (bb.DIVICE_TYPE = '2' OR bb.DIVICE_TYPE = '3')
+                </when>
+                <otherwise>
+                    AND (bb.DIVICE_TYPE = '1' OR bb.DIVICE_TYPE = '2' OR bb.DIVICE_TYPE = '3')
+                </otherwise>
+            </choose>
+        </if>
+    </select>
+
+    <!-- 게시물 조회수 업데이트 -->
+    <update id="updateBoardHits" parameterType="hashMap">
+        UPDATE TB_BOARD SET HITS = HITS + 1 WHERE BOARD_SEQ = #{BOARD_SEQ}
+    </update>
+
+    <!-- 게시물 상세 조회 -->
+    <select id="boardView" parameterType="hashMap" resultMap="boardMap">
+        SELECT
+            <if test="PARENT_BOARD_SEQ != null and PARENT_BOARD_SEQ != 0">
+                (SELECT CONTENT FROM TB_BOARD WHERE BOARD_SEQ = a.PARENT_BOARD_SEQ) AS ORIGIN,
+            </if>
+            a.BOARD_MNG_SEQ,
+            a.BOARD_SEQ,
+            a.OPEN_YN,
+            a.SUBJECT,
+            a.CONTENT,
+            a.ANSWER,
+            a.FILE_PATH,
+            a.FILE_NAME,
+            a.REAL_FILE_NAME,
+            a.PARENT_BOARD_SEQ,
+            a.NOTICE_TOP_YN,
+            DATE_FORMAT(a.REG_DT, '%Y-%m-%d') AS REG_DT,
+            a.REG_ID,
+            (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = a.REG_ID) AS USER_NM,
+            a.UPD_DT,
+            a.UPD_ID,
+            a.HITS,
+            CONCAT(LEFT(a.CREATENAME, 4), '*') AS CREATENAME,
+            a.THUMBNAIL_FILE_PATH,
+            a.THUMBNAIL_FILE_NAME,
+            a.THUMBNAIL_FILE_REAL_NAME,
+            a.ISSUE,
+            a.EXAM_TYPE,
+            a.EXAM_AREA,
+            a.EXAM_CATE,
+            a.EXAM_SUB,
+            a.PROF_ID,
+            a.MOCKCODE,
+            a.BOARD_REPLY,
+            CASE
+                WHEN a.BOARD_MNG_SEQ = 'BOARD_002' THEN '교재문의'
+                WHEN a.BOARD_MNG_SEQ = 'BOARD_003' THEN '수강문의'
+                WHEN a.BOARD_MNG_SEQ = 'BOARD_004' THEN '동영상오류문의'
+                WHEN a.BOARD_MNG_SEQ = 'BOARD_005' THEN '결제관련문의'
+                WHEN a.BOARD_MNG_SEQ = 'BOARD_006' THEN '기타문의'
+                WHEN a.BOARD_MNG_SEQ = 'BOARD_000' THEN '상담실'
+                ELSE (SELECT MNG.BOARD_MNG_NAME FROM TB_BOARD_MNG MNG WHERE MNG.BOARD_MNG_SEQ = a.BOARD_MNG_SEQ)
+            END AS BOARDNAME,
+            (SELECT COUNT(VOTING) FROM TB_BOARD_VOTING
+             WHERE BOARD_MNG_SEQ = a.BOARD_MNG_SEQ AND BOARD_SEQ = a.BOARD_SEQ
+             AND ISTYPE = 'R' AND VOTING = 'Y') AS VOTINGY_CNT,
+            <choose>
+                <when test='USER_ID != null and USER_ID != ""'>
+                    IFNULL((SELECT VOTING FROM TB_BOARD_VOTING
+                            WHERE BOARD_MNG_SEQ = a.BOARD_MNG_SEQ AND BOARD_SEQ = a.BOARD_SEQ
+                            AND ISTYPE = 'R' AND VOTING = 'Y' AND REG_ID = #{USER_ID}), 'N') AS VOTING_YN
+                </when>
+                <otherwise>
+                    'N' AS VOTING_YN
+                </otherwise>
+            </choose>
+        FROM TB_BOARD a
+        WHERE a.BOARD_SEQ = #{BOARD_SEQ}
+        <if test='BOARD_MNG_SEQ != null and BOARD_MNG_SEQ != ""'>
+            AND a.BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+        </if>
+    </select>
+
+    <!-- 게시물 첨부파일 조회 -->
+    <select id="boardAttachFile" parameterType="hashMap" resultType="hashMap">
+        SELECT BOARD_SEQ, FILE_NO, FILE_NAME, FILE_PATH
+        FROM TB_BOARD_FILE
+        WHERE BOARD_SEQ = #{BOARD_SEQ}
+        ORDER BY FILE_NO ASC
+    </select>
+
+    <!-- 게시물 이미지 파일 조회 -->
+    <select id="boardAttachFileImg" parameterType="hashMap" resultType="hashMap">
+        SELECT BOARD_SEQ, FILE_NO, FILE_NAME, FILE_PATH
+        FROM TB_BOARD_FILE
+        WHERE BOARD_SEQ = #{BOARD_SEQ}
+        AND (LOWER(RIGHT(FILE_NAME, 3)) IN ('jpg', 'peg', 'png', 'bmp', 'gif'))
+        ORDER BY FILE_NO ASC
+    </select>
+
+    <!-- 게시물 등록 -->
+    <insert id="insertProcess" parameterType="hashMap">
+        <selectKey keyProperty="BOARD_SEQ" resultType="String" order="BEFORE">
+            SELECT IFNULL(MAX(CAST(BOARD_SEQ AS UNSIGNED)), 0) + 1 FROM TB_BOARD
+        </selectKey>
+        INSERT INTO TB_BOARD (
+            BOARD_MNG_SEQ, BOARD_SEQ, OPEN_YN, SUBJECT, CONTENT,
+            PARENT_BOARD_SEQ, NOTICE_TOP_YN, REG_DT, REG_ID, UPD_DT, UPD_ID,
+            <if test="SEARCHPRFID != null and SEARCHPRFID != ''">PROF_ID,</if>
+            <if test="MOCKCODE != null and MOCKCODE != ''">MOCKCODE,</if>
+            <if test="COMMNTY_GUBN != null and COMMNTY_GUBN != ''">COMMNTY_GUBN,</if>
+            HITS, CREATENAME
+        ) VALUES (
+            #{BOARD_MNG_SEQ}, #{BOARD_SEQ}, #{OPEN_YN}, #{SUBJECT}, #{CONTENT},
+            '0', #{NOTICE_TOP_YN}, NOW(), #{REG_ID}, NOW(), #{REG_ID},
+            <if test="SEARCHPRFID != null and SEARCHPRFID != ''">#{SEARCHPRFID},</if>
+            <if test="MOCKCODE != null and MOCKCODE != ''">#{MOCKCODE},</if>
+            <if test="COMMNTY_GUBN != null and COMMNTY_GUBN != ''">#{COMMNTY_GUBN},</if>
+            '0', #{CREATENAME}
+        )
+    </insert>
+
+    <!-- 게시물 수정 -->
+    <update id="updateProcess" parameterType="hashMap">
+        UPDATE TB_BOARD
+        SET
+            NOTICE_TOP_YN = #{NOTICE_TOP_YN},
+            OPEN_YN = #{OPEN_YN},
+            SUBJECT = #{SUBJECT},
+            <if test="FILE_PATH != null and FILE_PATH != ''">
+                FILE_PATH = #{FILE_PATH},
+                FILE_NAME = #{FILE_NAME},
+                REAL_FILE_NAME = #{REAL_FILE_NAME},
+            </if>
+            <if test="COMMNTY_GUBN != null and COMMNTY_GUBN != ''">
+                COMMNTY_GUBN = #{COMMNTY_GUBN},
+            </if>
+            UPD_DT = NOW(),
+            UPD_ID = #{REG_ID},
+            CONTENT = #{CONTENT}
+        WHERE BOARD_SEQ = #{BOARD_SEQ}
+    </update>
+
+    <!-- 게시물 카테고리 정보 등록 -->
+    <insert id="insertBoardCatInfo" parameterType="hashMap">
+        INSERT INTO TB_BOARD_CATEGORY_INFO (
+            BOARD_MNG_SEQ, BOARD_SEQ, CATEGORY_CODE
+        ) VALUES (
+            #{BOARD_MNG_SEQ}, #{BOARD_SEQ}, #{CATEGORY_CODE}
+        )
+    </insert>
+
+    <!-- 게시물 파일 정보 업데이트 -->
+    <update id="updateBoardFile" parameterType="hashMap">
+        UPDATE TB_BOARD
+        SET FILE_PATH = '', FILE_NAME = '', REAL_FILE_NAME = ''
+        WHERE BOARD_SEQ = #{BOARD_SEQ}
+        AND FILE_PATH = #{FILE_PATH}
+    </update>
+
+    <!-- 게시물 삭제 -->
+    <delete id="deleteBoardData" parameterType="hashMap">
+        DELETE FROM TB_BOARD
+        WHERE BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+        AND BOARD_SEQ = #{BOARD_SEQ}
+    </delete>
+
+    <!-- 게시물 카테고리 정보 삭제 -->
+    <delete id="deleteBoardCateInfo" parameterType="hashMap">
+        DELETE FROM TB_BOARD_CATEGORY_INFO
+        WHERE BOARD_SEQ = #{BOARD_SEQ}
+        AND BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+    </delete>
+
+    <!-- 게시물 파일 등록 -->
+    <insert id="insertBoardFile" parameterType="hashMap">
+        INSERT INTO TB_BOARD_FILE (
+            BOARD_MNG_SEQ, BOARD_SEQ, FILE_NO,
+            FILE_NAME, FILE_PATH, REG_ID,
+            REG_DT, UPD_ID, UPD_DT
+        ) VALUES (
+            #{BOARD_MNG_SEQ}, #{BOARD_SEQ},
+            (SELECT IFNULL(MAX(CAST(FILE_NO AS UNSIGNED)), 0) + 1 FROM TB_BOARD_FILE AS t),
+            #{FILE_NAME}, #{FILE_PATH}, #{REG_ID},
+            NOW(), #{REG_ID}, NOW()
+        )
+    </insert>
+
+    <!-- 게시물 파일 삭제 -->
+    <delete id="deleteBoardFileData" parameterType="hashMap">
+        DELETE FROM TB_BOARD_FILE
+        WHERE BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+        AND BOARD_SEQ = #{BOARD_SEQ}
+    </delete>
+
+    <!-- 답글 조회 -->
+    <select id="boardReplyView" parameterType="hashMap" resultMap="boardMap">
+        SELECT
+            BOARD_MNG_SEQ, BOARD_SEQ, OPEN_YN, SUBJECT, CONTENT, ANSWER,
+            FILE_PATH, FILE_NAME, REAL_FILE_NAME, PARENT_BOARD_SEQ, NOTICE_TOP_YN,
+            DATE_FORMAT(REG_DT, '%Y-%m-%d') AS REG_DT,
+            (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = a.REG_ID) AS USER_NM,
+            REG_ID, UPD_DT, UPD_ID, HITS,
+            CONCAT(LEFT(CREATENAME, 4), '*') AS CREATENAME,
+            THUMBNAIL_FILE_PATH, THUMBNAIL_FILE_NAME, THUMBNAIL_FILE_REAL_NAME, ISSUE
+        FROM TB_BOARD a
+        WHERE PARENT_BOARD_SEQ = #{BOARD_SEQ}
+    </select>
+
+    <!-- 답글 등록 -->
+    <insert id="insertReplyProcess" parameterType="hashMap">
+        <selectKey keyProperty="BOARD_SEQ" resultType="String" order="BEFORE">
+            SELECT IFNULL(MAX(CAST(BOARD_SEQ AS UNSIGNED)), 0) + 1 FROM TB_BOARD
+        </selectKey>
+        INSERT INTO TB_BOARD (
+            BOARD_MNG_SEQ, BOARD_SEQ, OPEN_YN, SUBJECT, CONTENT,
+            PARENT_BOARD_SEQ, NOTICE_TOP_YN, REG_DT, REG_ID, UPD_DT, UPD_ID,
+            <if test="SEARCHPRFID != null and SEARCHPRFID != ''">PROF_ID,</if>
+            <if test="MOCKCODE != null and MOCKCODE != ''">MOCKCODE,</if>
+            HITS, CREATENAME
+        ) VALUES (
+            #{BOARD_MNG_SEQ}, #{BOARD_SEQ}, #{OPEN_YN}, #{SUBJECT}, #{CONTENT},
+            #{PARENT_BOARD_SEQ}, 'N', NOW(), #{REG_ID}, NOW(), #{REG_ID},
+            <if test="SEARCHPRFID != null and SEARCHPRFID != ''">#{SEARCHPRFID},</if>
+            <if test="MOCKCODE != null and MOCKCODE != ''">#{MOCKCODE},</if>
+            '0', #{CREATENAME}
+        )
+    </insert>
+
+    <!-- 답글 수정 -->
+    <update id="updateReplyProcess" parameterType="hashMap">
+        UPDATE TB_BOARD
+        SET SUBJECT = #{SUBJECT}, CONTENT = #{CONTENT}, UPD_DT = NOW()
+        WHERE PARENT_BOARD_SEQ = #{PARENT_BOARD_SEQ}
+    </update>
+
+    <!-- 답글 존재 여부 확인 -->
+    <select id="getIsReply" parameterType="hashMap" resultType="int">
+        SELECT COUNT(*) AS CNT
+        FROM TB_BOARD
+        WHERE PARENT_BOARD_SEQ = #{PARENT_BOARD_SEQ}
+    </select>
+
+</mapper>

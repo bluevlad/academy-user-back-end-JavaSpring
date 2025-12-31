@@ -1,0 +1,457 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.academy.mapper.BookMapper">
+
+    <resultMap type="java.util.HashMap" id="bookMap">
+        <result column="BOOK_INFO" property="BOOK_INFO" javaType="java.lang.String" jdbcType="CLOB"/>
+    </resultMap>
+
+    <!-- 도서 리스트 조회 -->
+    <select id="bookList" parameterType="hashMap" resultType="hashMap">
+        SELECT LTBL.*
+            ,(SELECT NAME FROM TB_CATEGORY_INFO WHERE ISUSE = 'Y' AND CODE = LTBL.CATEGORY_CD) CATEGORY_NM
+            ,(SELECT NAME FROM TB_LEARNING_FORM_INFO WHERE ISUSE = 'Y' AND CODE = LTBL.LEARNING_CD) LEARNING_NM
+            ,(SELECT COUNT(RSC_ID) FROM TB_CA_BOOK WHERE SEQ = LTBL.SEQ AND RSC_ID != LTBL.RSC_ID) RELCNT
+            ,(SELECT COUNT(RSC_ID) FROM TB_PLUS_CA_BOOK TPCB, TB_LEC_MST TLM
+                WHERE RSC_ID = LTBL.RSC_ID AND TPCB.LECCODE = TLM.LECCODE AND TLM.CATEGORY_CD = #{topMenu}) LECCNT
+        FROM (
+            SELECT TBL.*
+            FROM (
+                SELECT T2.*,
+                    CASE T2.COVER_TYPE
+                        WHEN 'A' THEN ''
+                        WHEN 'S' THEN '[품절]'
+                        WHEN 'O' THEN '[절판]'
+                        WHEN 'N' THEN '[신규]'
+                        ELSE ''
+                    END AS COVER_TYPE_NM
+                FROM TB_CA_BOOK T2
+                INNER JOIN (
+                    <if test='topMenu != null and topMenu != "" and topMenu != "MAIN"'>
+                        SELECT MAX(SEQ) SEQ, MAX(RSC_ID) RSC_ID, SUBJECT_SJT_CD, CATEGORY_CD, LEARNING_CD, BOOK_NM
+                        FROM TB_CA_BOOK
+                        GROUP BY SUBJECT_SJT_CD, CATEGORY_CD, LEARNING_CD, BOOK_NM
+                    </if>
+                    <if test='topMenu == "MAIN"'>
+                        SELECT MAX(SEQ) SEQ, MAX(RSC_ID) RSC_ID, SUBJECT_SJT_CD, LEARNING_CD, BOOK_NM
+                        FROM TB_CA_BOOK
+                        GROUP BY SUBJECT_SJT_CD, LEARNING_CD, BOOK_NM
+                    </if>
+                ) T1 ON T2.SEQ = T1.SEQ AND T2.RSC_ID = T1.RSC_ID
+                WHERE T2.USE_YN = 'Y'
+                AND IFNULL(T2.BOOK_STUDENTBOOK,'N') = 'N'
+                <if test='isMain != null and isMain == "Y"'>
+                    AND (SELECT COUNT(*) FROM TB_CA_BOOK T3 WHERE T3.SEQ = T2.SEQ AND USE_YN ='N') <![CDATA[ < ]]> 1
+                    AND (SELECT COUNT(*) FROM TB_CA_BOOK T3 WHERE T3.SEQ = T2.SEQ AND BOOK_STUDENTBOOK = 'Y') <![CDATA[ < ]]> 1
+                    AND T2.MAIN_VIEW = 'Y'
+                </if>
+                <if test='topMenu != null and topMenu != "" and topMenu != "MAIN"'>
+                    AND T2.CATEGORY_CD = #{topMenu}
+                </if>
+                <if test='SEARCHFORM != null and SEARCHFORM != ""'>
+                    AND T2.LEARNING_CD = #{SEARCHFORM}
+                </if>
+                <if test='SEARCHKIND != null and SEARCHKIND != ""'>
+                    AND T2.CATEGORY_CD = #{SEARCHKIND}
+                </if>
+                <if test='searchUserId != null and searchUserId != ""'>
+                    AND T2.SUBJECT_SJT_CD LIKE CONCAT('%', #{searchUserId}, '%')
+                </if>
+                <if test='SEARCHSTJCODE != null and SEARCHSTJCODE != ""'>
+                    AND T2.SUBJECT_SJT_CD LIKE CONCAT('%', #{SEARCHSTJCODE}, '%')
+                </if>
+                <if test='SEARCHSERIESCODE != null and SEARCHSERIESCODE != ""'>
+                    AND ( LEFT(T2.SUBJECT_SJT_CD, 4) IN (
+                            SELECT SUBJECT_CD FROM TB_SUBJECT_SERIES WHERE SERIES_CD = #{SEARCHSERIESCODE} )
+                        OR SUBSTRING(T2.SUBJECT_SJT_CD, 6, LENGTH(T2.SUBJECT_SJT_CD) - LOCATE('#', T2.SUBJECT_SJT_CD)) IN (
+                            SELECT USER_ID FROM TB_MA_MEMBER_SERIES WHERE SERIES_CD = #{SEARCHSERIESCODE} )
+                    )
+                </if>
+                <if test='SEARCHSUBJECTCODE != null and SEARCHSUBJECTCODE != ""'>
+                    AND T2.SUBJECT_SJT_CD LIKE CONCAT('%', #{SEARCHSUBJECTCODE}, '%')
+                </if>
+                <if test='SEARCHPRFCODE != null and SEARCHPRFCODE != ""'>
+                    AND T2.BOOK_AUTHOR LIKE CONCAT('%', #{SEARCHPRFCODE}, '%')
+                </if>
+                <if test='SEARCHTEXT != null and SEARCHTEXT != ""'>
+                    <if test='SEARCHTYPE != null and SEARCHTYPE != ""'>
+                        <if test='SEARCHTYPE == "1"'>
+                            AND T2.BOOK_NM LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                        </if>
+                        <if test='SEARCHTYPE == "2"'>
+                            AND T2.BOOK_AUTHOR LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                        </if>
+                        <if test='SEARCHTYPE == "3"'>
+                            AND T2.BOOK_PUBLISHERS LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                        </if>
+                    </if>
+                    <if test='SEARCHTYPE == null or SEARCHTYPE == ""'>
+                        AND (
+                            T2.BOOK_AUTHOR LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                            OR T2.BOOK_PUBLISHERS LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                            OR T2.BOOK_NM LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                        )
+                    </if>
+                </if>
+                ORDER BY IFNULL(REG_DT, UPD_DT) DESC
+            ) TBL
+            LIMIT #{endNo} OFFSET #{startNo}
+        ) LTBL
+    </select>
+
+    <!-- 도서 리스트 건수 조회 -->
+    <select id="bookListCount" parameterType="hashMap" resultType="int">
+        SELECT COUNT(*)
+        FROM (
+            SELECT T2.*,
+                CASE T2.COVER_TYPE
+                    WHEN 'A' THEN ''
+                    WHEN 'S' THEN '[품절]'
+                    WHEN 'O' THEN '[절판]'
+                    WHEN 'N' THEN '[신규]'
+                    ELSE ''
+                END AS COVER_TYPE_NM
+            FROM TB_CA_BOOK T2
+            INNER JOIN (
+                <if test='topMenu != null and topMenu != "" and topMenu != "MAIN"'>
+                    SELECT MAX(SEQ) SEQ, MAX(RSC_ID) RSC_ID, SUBJECT_SJT_CD, CATEGORY_CD, LEARNING_CD, BOOK_NM
+                    FROM TB_CA_BOOK
+                    GROUP BY SUBJECT_SJT_CD, CATEGORY_CD, LEARNING_CD, BOOK_NM
+                </if>
+                <if test='topMenu == "MAIN"'>
+                    SELECT MAX(SEQ) SEQ, MAX(RSC_ID) RSC_ID, SUBJECT_SJT_CD, LEARNING_CD, BOOK_NM
+                    FROM TB_CA_BOOK
+                    GROUP BY SUBJECT_SJT_CD, LEARNING_CD, BOOK_NM
+                </if>
+            ) T1 ON T2.SEQ = T1.SEQ AND T2.RSC_ID = T1.RSC_ID
+            WHERE T2.USE_YN = 'Y'
+            AND IFNULL(T2.BOOK_STUDENTBOOK,'N') = 'N'
+            <if test='isMain != null and isMain == "Y"'>
+                AND (SELECT COUNT(*) FROM TB_CA_BOOK T3 WHERE T3.SEQ = T2.SEQ AND USE_YN ='N') <![CDATA[ < ]]> 1
+                AND (SELECT COUNT(*) FROM TB_CA_BOOK T3 WHERE T3.SEQ = T2.SEQ AND BOOK_STUDENTBOOK = 'Y') <![CDATA[ < ]]> 1
+                AND T2.MAIN_VIEW = 'Y'
+            </if>
+            <if test='topMenu != null and topMenu != "" and topMenu != "MAIN"'>
+                AND T2.CATEGORY_CD = #{topMenu}
+            </if>
+            <if test='SEARCHFORM != null and SEARCHFORM != ""'>
+                AND T2.LEARNING_CD = #{SEARCHFORM}
+            </if>
+            <if test='SEARCHKIND != null and SEARCHKIND != ""'>
+                AND T2.CATEGORY_CD = #{SEARCHKIND}
+            </if>
+            <if test='SEARCHSTJCODE != null and SEARCHSTJCODE != ""'>
+                AND T2.SUBJECT_SJT_CD LIKE CONCAT('%', #{SEARCHSTJCODE}, '%')
+            </if>
+            <if test='SEARCHSERIESCODE != null and SEARCHSERIESCODE != ""'>
+                AND ( LEFT(T2.SUBJECT_SJT_CD, 4) IN (
+                        SELECT SUBJECT_CD FROM TB_SUBJECT_SERIES WHERE SERIES_CD = #{SEARCHSERIESCODE} )
+                    OR SUBSTRING(T2.SUBJECT_SJT_CD, 6, LENGTH(T2.SUBJECT_SJT_CD) - LOCATE('#', T2.SUBJECT_SJT_CD)) IN (
+                        SELECT USER_ID FROM TB_MA_MEMBER_SERIES WHERE SERIES_CD = #{SEARCHSERIESCODE} )
+                )
+            </if>
+            <if test='SEARCHSUBJECTCODE != null and SEARCHSUBJECTCODE != ""'>
+                AND T2.SUBJECT_SJT_CD LIKE CONCAT('%', #{SEARCHSUBJECTCODE}, '%')
+            </if>
+            <if test='SEARCHPRFCODE != null and SEARCHPRFCODE != ""'>
+                AND T2.BOOK_AUTHOR LIKE CONCAT('%', #{SEARCHPRFCODE}, '%')
+            </if>
+            <if test='SEARCHTEXT != null and SEARCHTEXT != ""'>
+                <if test='SEARCHTYPE != null and SEARCHTYPE != ""'>
+                    <if test='SEARCHTYPE == "1"'>
+                        AND T2.BOOK_NM LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                    </if>
+                    <if test='SEARCHTYPE == "2"'>
+                        AND T2.BOOK_AUTHOR LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                    </if>
+                    <if test='SEARCHTYPE == "3"'>
+                        AND T2.BOOK_PUBLISHERS LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                    </if>
+                </if>
+                <if test='SEARCHTYPE == null or SEARCHTYPE == ""'>
+                    AND (
+                        T2.BOOK_AUTHOR LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                        OR T2.BOOK_PUBLISHERS LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                        OR T2.BOOK_NM LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                    )
+                </if>
+            </if>
+        ) CNT
+    </select>
+
+    <!-- 좌측 학습형태 리스트 조회 -->
+    <select id="leftFormList" parameterType="hashMap" resultType="hashMap">
+        SELECT * FROM TB_LEARNING_FORM_INFO
+        WHERE ISUSE = 'Y' AND LEC_DIV = 'LEC_A'
+    </select>
+
+    <!-- 좌측 교수 리스트 조회 -->
+    <select id="leftTeacherList" parameterType="hashMap" resultType="hashMap">
+        SELECT C.USER_ID, E.USER_NM, A.SUBJECT_CD, B.SUBJECT_NM
+        FROM TB_SUBJECT_CATEGORY A
+        INNER JOIN TB_CATEGORY_SUBJECT_ORDER AA ON A.CATEGORY_CODE = AA.CATEGORY_CODE AND A.SUBJECT_CD = AA.SUBJECT_CD
+        INNER JOIN TB_SUBJECT_INFO B ON A.SUBJECT_CD = B.SUBJECT_CD
+        INNER JOIN TB_MA_MEMBER_SUBJECT C ON A.SUBJECT_CD = C.SUBJECT_CD
+        INNER JOIN TB_MA_MEMBER_CATEGORY D ON A.CATEGORY_CODE = D.CATEGORY_CODE AND C.USER_ID = D.USER_ID
+        INNER JOIN TB_MA_MEMBER E ON C.USER_ID = E.USER_ID
+        INNER JOIN TB_CA_BOOK F ON A.CATEGORY_CODE = F.CATEGORY_CD
+        WHERE B.ISUSE = 'Y'
+        AND E.ISUSE = 'Y'
+        AND E.USER_ROLE = 'PRF'
+        AND A.CATEGORY_CODE = #{topMenu}
+        <if test='topMenuType != null and topMenuType == "O" '>
+            AND E.ON_OPENYN = 'Y'
+            AND AA.ONOFF_DIV = 'O'
+        </if>
+        <if test='topMenuType != null and topMenuType == "F" '>
+            AND E.OFF_OPENYN = 'Y'
+            AND AA.ONOFF_DIV = 'F'
+        </if>
+        AND F.SUBJECT_SJT_CD LIKE CONCAT('%', CONCAT(A.SUBJECT_CD, '#', C.USER_ID), '%')
+        AND F.USE_YN = 'Y'
+        AND (F.BOOK_STUDENTBOOK IS NULL OR F.BOOK_STUDENTBOOK = 'N')
+        <if test='SEARCHSERIESCODE != null and SEARCHSERIESCODE != ""'>
+            AND B.SUBJECT_CD IN (
+                SELECT SUBJECT_CD FROM TB_SUBJECT_SERIES WHERE SERIES_CD = #{SEARCHSERIESCODE} )
+            AND E.USER_ID IN (
+                SELECT USER_ID FROM TB_MA_MEMBER_SERIES WHERE SERIES_CD = #{SEARCHSERIESCODE} )
+        </if>
+        GROUP BY C.USER_ID, E.USER_NM, A.SUBJECT_CD, B.SUBJECT_NM, AA.SUBJECT_CD
+        ORDER BY MIN(AA.IDX), MIN(D.SEQ)
+    </select>
+
+    <!-- 교수 리스트 조회 -->
+    <select id="selectTeacherList" parameterType="hashMap" resultType="hashMap">
+        SELECT C.USER_ID, E.USER_NM, A.SUBJECT_CD, B.SUBJECT_NM
+        FROM TB_SUBJECT_CATEGORY A
+        INNER JOIN TB_CATEGORY_SUBJECT_ORDER AA ON A.CATEGORY_CODE = AA.CATEGORY_CODE AND A.SUBJECT_CD = AA.SUBJECT_CD
+        INNER JOIN TB_SUBJECT_INFO B ON A.SUBJECT_CD = B.SUBJECT_CD
+        INNER JOIN TB_MA_MEMBER_SUBJECT C ON A.SUBJECT_CD = C.SUBJECT_CD
+        INNER JOIN TB_MA_MEMBER_CATEGORY D ON A.CATEGORY_CODE = D.CATEGORY_CODE AND C.USER_ID = D.USER_ID
+        INNER JOIN TB_MA_MEMBER E ON C.USER_ID = E.USER_ID
+        <if test='BOOKFLAG == "Y"'>
+            INNER JOIN TB_CA_BOOK F ON A.CATEGORY_CODE = F.CATEGORY_CD
+        </if>
+        WHERE B.ISUSE = 'Y'
+        AND E.ISUSE = 'Y'
+        AND E.USER_ROLE = 'PRF'
+        AND A.CATEGORY_CODE = #{topMenu}
+        <if test='topMenuType != null and topMenuType == "O" '>
+            AND E.ON_OPENYN = 'Y'
+            AND AA.ONOFF_DIV = 'O'
+        </if>
+        <if test='topMenuType != null and topMenuType == "F" '>
+            AND E.OFF_OPENYN = 'Y'
+            AND AA.ONOFF_DIV = 'F'
+        </if>
+        <if test='BOOKFLAG == "Y"'>
+            AND F.SUBJECT_SJT_CD LIKE CONCAT('%', CONCAT(A.SUBJECT_CD, '#', C.USER_ID), '%')
+            AND F.USE_YN = 'Y'
+            AND (F.BOOK_STUDENTBOOK IS NULL OR F.BOOK_STUDENTBOOK = 'N')
+        </if>
+        <if test='SEARCHSERIESCODE != null and SEARCHSERIESCODE != ""'>
+            AND B.SUBJECT_CD IN (
+                SELECT SUBJECT_CD FROM TB_SUBJECT_SERIES WHERE SERIES_CD = #{SEARCHSERIESCODE} )
+            AND E.USER_ID IN (
+                SELECT USER_ID FROM TB_MA_MEMBER_SERIES WHERE SERIES_CD = #{SEARCHSERIESCODE} )
+        </if>
+        <if test='SEARCHSUBJECTCODE != null and SEARCHSUBJECTCODE != ""'>
+            AND B.SUBJECT_CD LIKE CONCAT('%', #{SEARCHSUBJECTCODE}, '%')
+        </if>
+        <if test='SUBJECT_SJT_CD != null and SUBJECT_SJT_CD != ""'>
+            AND A.SUBJECT_CD = #{SUBJECT_SJT_CD}
+        </if>
+        GROUP BY C.USER_ID, E.USER_NM, A.SUBJECT_CD, B.SUBJECT_NM, AA.SUBJECT_CD
+        ORDER BY MIN(AA.IDX), MIN(D.SEQ)
+    </select>
+
+    <!-- 도서 연관 강의 리스트 조회 -->
+    <select id="bookLectureList" parameterType="hashMap" resultType="hashMap">
+        SELECT
+            AA.RSC_ID, CC.BRIDGE_LECCODE, BB.LECCODE, BB.SUBJECT_TITLE
+            , BB.LEARNING_CD, BB.SUBJECT_SJT_CD
+            , (SELECT NAME FROM TB_LEARNING_FORM_INFO WHERE ISUSE = 'Y' AND CODE = BB.LEARNING_CD) LEARNING_NM
+            , BB.SUBJECT_TEACHER
+            , (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = BB.SUBJECT_TEACHER) AS SUBJECT_TEACHER_NM
+        FROM TB_PLUS_CA_BOOK AA
+        INNER JOIN TB_LEC_MST BB ON AA.LECCODE = BB.LECCODE
+        INNER JOIN TB_LEC_BRIDGE CC ON BB.LECCODE = CC.LECCODE
+        WHERE AA.RSC_ID IN (
+            <if test='RSC_ID != null and RSC_ID != ""'>
+                #{RSC_ID}
+            </if>
+            <if test='RSC_ID == null or RSC_ID == ""'>
+                SELECT T2.RSC_ID
+                FROM TB_CA_BOOK T2
+                WHERE 1 = 1
+                <if test='topMenu != null and topMenu != ""'>
+                    AND T2.CATEGORY_CD = #{topMenu}
+                </if>
+                <if test='SEARCHFORM != null and SEARCHFORM != ""'>
+                    AND T2.LEARNING_CD = #{SEARCHFORM}
+                </if>
+                <if test='SEARCHKIND != null and SEARCHKIND != ""'>
+                    AND T2.CATEGORY_CD = #{SEARCHKIND}
+                </if>
+                <if test='SEARCHSTJCODE != null and SEARCHSTJCODE != ""'>
+                    AND T2.SUBJECT_SJT_CD LIKE CONCAT('%', #{SEARCHSTJCODE}, '%')
+                </if>
+                <if test='SEARCHSERIESCODE != null and SEARCHSERIESCODE != ""'>
+                    AND ( LEFT(T2.SUBJECT_SJT_CD, 4) IN (
+                            SELECT SUBJECT_CD FROM TB_SUBJECT_SERIES WHERE SERIES_CD = #{SEARCHSERIESCODE} )
+                        OR SUBSTRING(T2.SUBJECT_SJT_CD, 6, LENGTH(T2.SUBJECT_SJT_CD) - LOCATE('#', T2.SUBJECT_SJT_CD)) IN (
+                            SELECT USER_ID FROM TB_MA_MEMBER_SERIES WHERE SERIES_CD = #{SEARCHSERIESCODE} )
+                    )
+                </if>
+                <if test='SEARCHSUBJECTCODE != null and SEARCHSUBJECTCODE != ""'>
+                    AND T2.SUBJECT_SJT_CD LIKE CONCAT('%', #{SEARCHSUBJECTCODE}, '%')
+                </if>
+                <if test='SEARCHTEXT != null and SEARCHTEXT != ""'>
+                    <if test='SEARCHTYPE != null and SEARCHTYPE != ""'>
+                        <if test='SEARCHTYPE == "1"'>
+                            AND T2.BOOK_NM LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                        </if>
+                        <if test='SEARCHTYPE == "2"'>
+                            AND T2.BOOK_AUTHOR LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                        </if>
+                        <if test='SEARCHTYPE == "3"'>
+                            AND T2.BOOK_PUBLISHERS LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                        </if>
+                    </if>
+                    <if test='SEARCHTYPE == null or SEARCHTYPE == ""'>
+                        AND (
+                            T2.BOOK_AUTHOR LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                            OR T2.BOOK_PUBLISHERS LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                            OR T2.BOOK_NM LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                        )
+                    </if>
+                </if>
+                <if test='STUDENTBOOK_DISP_YN != null and STUDENTBOOK_DISP_YN != "Y"'>
+                    AND IFNULL(T2.BOOK_STUDENTBOOK,'N') = 'N'
+                </if>
+                ORDER BY T2.SEQ DESC
+            </if>
+        )
+        <if test='topMenu != null and topMenu != ""'>
+            AND BB.CATEGORY_CD = #{topMenu}
+        </if>
+    </select>
+
+    <!-- 과목 정보 조회 -->
+    <select id="getSubjectInfo" parameterType="hashMap" resultType="hashMap">
+        SELECT * FROM TB_SUBJECT_INFO WHERE SUBJECT_CD = #{SEARCHSUBJECTCODE}
+    </select>
+
+    <!-- 도서 장바구니 체크 -->
+    <select id="bookCartCheck" parameterType="hashMap" resultType="hashMap">
+        SELECT BB.BOOK_NM, AA.BOOK_COUNT
+        FROM TB_CC_CART AA
+        LEFT JOIN TB_CA_BOOK BB ON AA.RSC_ID = BB.RSC_ID
+        WHERE AA.USER_ID = #{USER_ID}
+        AND AA.KIND_TYPE = #{KIND_TYPE}
+        AND AA.RSC_ID = #{RSC_ID}
+    </select>
+
+    <!-- 도서 장바구니 등록 -->
+    <insert id="bookCartInsert" parameterType="hashMap">
+        INSERT INTO TB_CC_CART(
+            USER_ID, LECCODE, KIND_TYPE, RSC_ID, RSC_TYPE, REGDATE, BOOK_COUNT
+        ) VALUES(
+            #{USER_ID}, #{LECCODE}, #{KIND_TYPE}, #{RSC_ID}, #{RSC_TYPE}, NOW(), #{BOOK_COUNT}
+        )
+    </insert>
+
+    <!-- 도서 장바구니 수정 -->
+    <update id="bookCartUpdate" parameterType="hashMap">
+        UPDATE TB_CC_CART SET
+            BOOK_COUNT = #{BOOK_COUNT},
+            REGDATE = NOW()
+        WHERE USER_ID = #{USER_ID}
+        AND KIND_TYPE = #{KIND_TYPE}
+        AND RSC_ID = #{RSC_ID}
+    </update>
+
+    <!-- 학습형태 리스트 조회 -->
+    <select id="getLearningFormList" parameterType="hashMap" resultType="hashMap">
+        SELECT
+            LEC_DIV, CODE, NAME
+        FROM TB_LEARNING_FORM_INFO
+        WHERE LEC_DIV = 'LEC_A' AND ISUSE = 'Y'
+        ORDER BY CODE ASC
+    </select>
+
+    <!-- 과목-교수 리스트 조회 -->
+    <select id="getCaSubjectTeacherList" parameterType="hashMap" resultType="hashMap">
+        SELECT TBL.* FROM (
+            SELECT
+                CC.USER_ID, AA.SUBJECT_NM, CC.USER_NM, AA.SUBJECT_CD, CC.PAYMENT, CC.OFF_PAYMENT
+                <if test='RSC_ID != null and RSC_ID != ""'>
+                    , (SELECT COUNT(SUBJECT_SJT_CD) FROM TB_CA_BOOK WHERE RSC_ID = #{RSC_ID} AND SUBJECT_SJT_CD LIKE CONCAT('%', CONCAT(AA.SUBJECT_CD, '#', CC.USER_ID), '%')) SCNT
+                </if>
+                <if test='LECCODE != null and LECCODE != ""'>
+                    , (SELECT COUNT(SUBJECT_SJT_CD) FROM TB_LEC_MST WHERE LECCODE = #{LECCODE}
+                        AND BB.USER_ID = (SELECT SUBJECT_TEACHER FROM TB_LEC_MST WHERE LECCODE = #{LECCODE}) AND SUBJECT_SJT_CD = AA.SUBJECT_CD) SCNT
+                </if>
+            FROM TB_SUBJECT_INFO AA
+            INNER JOIN TB_MA_MEMBER_SUBJECT BB ON AA.SUBJECT_CD = BB.SUBJECT_CD
+            INNER JOIN TB_MA_MEMBER CC ON BB.USER_ID = CC.USER_ID
+            WHERE AA.ISUSE = 'Y' AND CC.ISUSE = 'Y' AND CC.USER_NM IS NOT NULL
+        ) TBL
+        ORDER BY
+        <if test='(RSC_ID != null and RSC_ID != "") or (LECCODE != null and LECCODE != "")'>
+            TBL.SCNT DESC,
+        </if>
+        TBL.USER_NM, TBL.SUBJECT_NM ASC
+    </select>
+
+    <!-- 도서 상세 조회 (리스트형) -->
+    <select id="bookViewList" parameterType="hashMap" resultType="hashMap">
+        SELECT
+            (SELECT IFNULL(SUM(CNT),0) FROM TB_ORDER_MGNT_NO WHERE STATUSCODE IN ('DLV105','DLV110','DLV120','DLV130') AND MGNTNO = AA.RSC_ID)
+            - (SELECT IFNULL(SUM(CNT),0) FROM TB_ORDER_MGNT_NO WHERE MGNTNO = AA.RSC_ID AND PRICE <![CDATA[<]]> 0) AS CNT,
+            SEQ, RSC_ID, SUBJECT_SJT_CD, CATEGORY_CD, LEARNING_CD, BOOK_NM,
+            BOOK_INFO, BOOK_MEMO, BOOK_KEYWORD, ISSUE_DATE,
+            CASE AA.COVER_TYPE
+                WHEN 'A' THEN '주문가능'
+                WHEN 'S' THEN '품절'
+                WHEN 'O' THEN '절판'
+                WHEN 'N' THEN '신규'
+                ELSE ''
+            END AS COVER_TYPE,
+            BOOK_CONTENTS, PRICE, DISCOUNT, DISCOUNT_PRICE,
+            POINT, BOOK_PUBLISHERS, BOOK_AUTHOR, BOOK_MAIN,
+            ATTACH_FILE, ATTACH_IMG_L, ATTACH_IMG_M, ATTACH_IMG_S, ATTACH_DETAIL_INFO,
+            CASE WHEN BOOK_STOCK <![CDATA[ < ]]> 0 THEN 0 WHEN BOOK_STOCK <![CDATA[ >= ]]> 0 THEN BOOK_STOCK END BOOK_STOCK,
+            REG_DT, UPD_DT, UPD_ID,
+            (SELECT NAME FROM TB_CATEGORY_INFO WHERE ISUSE = 'Y' AND CODE = AA.CATEGORY_CD) CATEGORY_NM,
+            (SELECT NAME FROM TB_LEARNING_FORM_INFO WHERE ISUSE = 'Y' AND CODE = AA.LEARNING_CD) LEARNING_NM
+        FROM TB_CA_BOOK AA
+        WHERE SEQ = #{SEQ}
+        ORDER BY AA.SEQ DESC, AA.RSC_ID DESC
+    </select>
+
+    <!-- 도서 상세 조회 -->
+    <select id="bookView" parameterType="hashMap" resultMap="bookMap">
+        SELECT AA.*
+            , LPAD(CAST((CASE WHEN AA.BOOK_STOCK <![CDATA[ < ]]> 0 THEN 0 WHEN AA.BOOK_STOCK <![CDATA[ >= ]]> 0 THEN BOOK_STOCK END)*3 AS CHAR), 4, '0') B_STOCK
+            , IFNULL(AA.MAIN_VIEW,'N') AS MAIN_VIEW
+            , IFNULL(AA.NEW_BOOK,'N') AS NEW_BOOK
+            , CASE AA.COVER_TYPE
+                WHEN 'A' THEN '주문가능'
+                WHEN 'N' THEN '신규'
+                WHEN 'O' THEN '절판'
+                WHEN 'S' THEN '품절'
+                ELSE ' '
+            END AS COVER_TYPENM
+            , (SELECT NAME FROM TB_CATEGORY_INFO WHERE ISUSE = 'Y' AND CODE = AA.CATEGORY_CD) CATEGORY_NM
+        FROM TB_CA_BOOK AA
+        WHERE AA.RSC_ID = #{RSC_ID}
+    </select>
+
+    <!-- 도서 사용 여부 체크 -->
+    <select id="bookUseCheck" parameterType="hashMap" resultType="int">
+        SELECT COUNT(*) FROM TB_PLUS_CA_BOOK
+        WHERE RSC_ID = #{RSC_ID}
+    </select>
+
+</mapper>

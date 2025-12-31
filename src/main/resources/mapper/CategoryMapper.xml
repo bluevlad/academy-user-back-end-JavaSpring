@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.academy.mapper.CategoryMapper">
+
+    <!-- 직렬 카테고리 트리 리스트 조회 (Oracle CONNECT BY -> MariaDB CTE) -->
+    <select id="getSeriesCateTree" parameterType="hashMap" resultType="hashMap">
+        WITH RECURSIVE category_tree AS (
+            <!-- 루트 노드 -->
+            <choose>
+                <when test="SEARCHCAT != null and SEARCHCAT != ''">
+                    SELECT CODE, NAME, ORDR, IFNULL(P_CODE, '-1') as P_CODE, 1 as LEVEL
+                    FROM TB_CATEGORY_INFO
+                    WHERE CODE = #{SEARCHCAT}
+                    AND ISUSE = 'Y'
+                </when>
+                <otherwise>
+                    SELECT CODE, NAME, ORDR, IFNULL(P_CODE, '-1') as P_CODE, 0 as LEVEL
+                    FROM TB_CATEGORY_INFO
+                    WHERE CODE = 'CLASSCODE'
+                    AND ISUSE = 'Y'
+                </otherwise>
+            </choose>
+            UNION ALL
+            <!-- 자식 노드 -->
+            SELECT c.CODE, c.NAME, c.ORDR, IFNULL(c.P_CODE, '-1') as P_CODE, ct.LEVEL + 1
+            FROM TB_CATEGORY_INFO c
+            INNER JOIN category_tree ct ON ct.CODE = c.P_CODE
+            WHERE c.ISUSE = 'Y'
+        )
+        SELECT CODE, NAME, ORDR, P_CODE, LEVEL
+        FROM category_tree
+        <choose>
+            <when test="SEARCHCAT != null and SEARCHCAT != ''">
+                WHERE LEVEL > 0
+            </when>
+            <otherwise>
+                WHERE LEVEL > -1
+            </otherwise>
+        </choose>
+        ORDER BY ORDR ASC
+    </select>
+
+    <!-- 카테고리 리스트 조회 (Oracle ROWNUM -> MariaDB LIMIT OFFSET) -->
+    <select id="selectCategory" parameterType="hashMap" resultType="hashMap">
+        SELECT
+            ID, CODE, NAME, ISUSE,
+            CASE WHEN ISUSE = 'Y' THEN '활성' ELSE '비활성' END AS ISUSENM,
+            CASE WHEN USE_ON = 'Y' THEN '사용' ELSE '미사용' END AS USE_ON,
+            CASE WHEN USE_OFF = 'Y' THEN '사용' ELSE '미사용' END AS USE_OFF,
+            REG_DT, REG_ID, UPD_DT, UPD_ID
+        FROM TB_CATEGORY_INFO
+        WHERE 1 = 1
+        AND P_CODE = 'CLASSCODE'
+        <if test="SEARCHCAT != null and SEARCHCAT != ''">
+            AND CODE LIKE CONCAT('%', #{SEARCHCAT}, '%')
+        </if>
+        ORDER BY UPD_DT DESC
+        LIMIT #{recordCountPerPage} OFFSET #{firstIndex}
+    </select>
+
+    <!-- 카테고리 건수 조회 -->
+    <select id="getCategoryCount" parameterType="hashMap" resultType="int">
+        SELECT COUNT(CODE)
+        FROM TB_CATEGORY_INFO
+        WHERE 1 = 1
+        AND P_CODE = 'CLASSCODE'
+        <if test="SEARCHCAT != null and SEARCHCAT != ''">
+            AND CODE LIKE CONCAT('%', #{SEARCHCAT}, '%')
+        </if>
+    </select>
+
+    <!-- 직렬-과목 리스트 조회 -->
+    <select id="selectSeriesSubject" parameterType="hashMap" resultType="hashMap">
+        SELECT B.CATEGORY_CODE, A.SUBJECT_CD, A.SUBJECT_NM
+        FROM TB_SUBJECT_INFO A
+        INNER JOIN TB_SUBJECT_CATEGORY B ON A.SUBJECT_CD = B.SUBJECT_CD
+        INNER JOIN TB_SUBJECT_SERIES C ON A.SUBJECT_CD = C.SUBJECT_CD AND B.SUBJECT_CD = C.SUBJECT_CD
+        WHERE 1 = 1
+        <if test="CATEGORY_CD != null and CATEGORY_CD != ''">
+            AND B.CATEGORY_CODE = #{CATEGORY_CD}
+        </if>
+        <if test="SERIES_CD != null and SERIES_CD != ''">
+            AND C.SERIES_CD = #{SERIES_CD}
+        </if>
+        GROUP BY B.CATEGORY_CODE, A.SUBJECT_CD, A.SUBJECT_NM
+        ORDER BY CATEGORY_CODE, SUBJECT_CD, SUBJECT_NM
+    </select>
+
+    <!-- 직렬-교수 리스트 조회 -->
+    <select id="selectSeriesProf" parameterType="hashMap" resultType="hashMap">
+        SELECT A.USER_ID, A.USER_NM
+        FROM TB_MA_MEMBER A
+        INNER JOIN TB_MA_MEMBER_CATEGORY B ON A.USER_ID = B.USER_ID
+        INNER JOIN TB_MA_MEMBER_SUBJECT C ON A.USER_ID = C.USER_ID AND B.USER_ID = C.USER_ID
+        INNER JOIN TB_MA_MEMBER_SERIES D ON A.USER_ID = D.USER_ID AND B.USER_ID = D.USER_ID
+        WHERE 1 = 1
+        <if test="CATEGORY_CD != null and CATEGORY_CD != ''">
+            AND B.CATEGORY_CODE = #{CATEGORY_CD}
+        </if>
+        <if test="SUBJECT_CD != null and SUBJECT_CD != ''">
+            AND C.SUBJECT_CD = #{SUBJECT_CD}
+        </if>
+        <if test="SERIES_CD != null and SERIES_CD != ''">
+            AND D.SERIES_CD = #{SERIES_CD}
+        </if>
+        GROUP BY A.USER_NM, A.USER_ID
+        ORDER BY USER_NM, USER_ID
+    </select>
+
+    <!-- 서브 메인화면 과목 목록 조회 -->
+    <select id="selectSubMainCateSubjectList" parameterType="hashMap" resultType="hashMap">
+        SELECT SUBJECT_CD, SUBJECT_NM, IDX
+        FROM (
+            SELECT C.CATEGORY_CODE, A.SUBJECT_CD, A.SUBJECT_NM, MIN(B.IDX) AS IDX
+            FROM TB_SUBJECT_INFO A
+            INNER JOIN TB_MAIN_CATEGORY_SUBJECT_ORDER B ON A.SUBJECT_CD = B.SUBJECT_CD
+            INNER JOIN TB_SUBJECT_CATEGORY C ON A.SUBJECT_CD = C.SUBJECT_CD AND B.SUBJECT_CD = C.SUBJECT_CD
+            WHERE A.ISUSE = 'Y'
+            AND B.ONOFF_DIV = 'M'
+            <if test="CATEGORY_CD != null and CATEGORY_CD != ''">
+                AND C.CATEGORY_CODE = #{CATEGORY_CD}
+            </if>
+            GROUP BY C.CATEGORY_CODE, A.SUBJECT_CD, A.SUBJECT_NM
+        ) AS sub
+        ORDER BY IDX, SUBJECT_CD
+    </select>
+
+    <!-- 서브 메인화면 교수 목록 조회 -->
+    <select id="selectSubMainCateTeacherList" parameterType="hashMap" resultType="hashMap">
+        SELECT A.USER_ID, B.USER_NM, B.ISUSE, B.EMAIL, B.PHONE_NO,
+            CASE WHEN B.ISUSE = 'Y' THEN '공개' ELSE '비공개' END AS ISUSENM,
+            B.REG_DT, B.BIRTH_DAY, B.ON_OPENYN, B.OFF_OPENYN,
+            CASE WHEN IFNULL(B.ON_OPENYN,'Y') = 'Y' THEN '활성' ELSE '비활성' END AS ON_OPENYNNM,
+            CASE WHEN IFNULL(B.OFF_OPENYN,'Y') = 'Y' THEN '활성' ELSE '비활성' END AS OFF_OPENYNNM,
+            A.SUBJECT_CD,
+            C.SUBJECT_NM,
+            A.CATEGORY_CODE AS CATEGORY_CD,
+            (SELECT DD.NAME FROM TB_CATEGORY_INFO DD WHERE DD.CODE = E.CATEGORY_CODE) AS CATEGORY_NM,
+            A.SEQ,
+            B.PIC1, B.PIC2, B.PIC3, B.PIC4, B.PIC5, B.PIC6, B.PIC7, B.PIC8,
+            B.OFF_PIC1, B.OFF_PIC2, B.OFF_PIC3, B.OFF_PIC4, B.OFF_PIC5, B.OFF_PIC6, B.OFF_PIC7, B.OFF_PIC8,
+            B.TITLE,
+            B.OFF_TITLE,
+            F.CATEGORY_CODE
+        FROM TB_MA_MEMBER_MAIN_CATEGORY A
+        INNER JOIN TB_MA_MEMBER B ON A.USER_ID = B.USER_ID
+        INNER JOIN TB_MA_MEMBER_CATEGORY E ON A.USER_ID = E.USER_ID
+        INNER JOIN TB_SUBJECT_INFO C ON A.SUBJECT_CD = C.SUBJECT_CD
+        INNER JOIN TB_MAIN_CATEGORY_SUBJECT_ORDER D ON C.SUBJECT_CD = D.SUBJECT_CD
+        INNER JOIN TB_SUBJECT_CATEGORY F ON C.SUBJECT_CD = F.SUBJECT_CD
+        WHERE D.ONOFF_DIV = 'M'
+        AND C.ISUSE = 'Y'
+        AND B.ISUSE = 'Y'
+        AND B.OFF_OPENYN = 'Y'
+        <if test="CATEGORY_CD != null and CATEGORY_CD != ''">
+            AND E.CATEGORY_CODE = #{CATEGORY_CD}
+            AND F.CATEGORY_CODE = #{CATEGORY_CD}
+        </if>
+        ORDER BY C.SUBJECT_CD, A.SEQ
+    </select>
+
+</mapper>

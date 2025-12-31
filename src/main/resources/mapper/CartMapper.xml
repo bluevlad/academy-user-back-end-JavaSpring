@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.academy.mapper.CartMapper">
+
+    <!-- 온라인 강좌 장바구니 리스트 조회 -->
+    <select id="cartLectureOnList" parameterType="hashMap" resultType="hashMap">
+        SELECT A.SEQ, A.USER_ID, A.LECCODE, A.KIND_TYPE, A.MOVIE_TYPE, A.REGDATE, B.SUBJECT_TEACHER,
+            '' REAPPLYNM,
+            (SELECT SUBSTRING(NAME, 1, 2) FROM TB_LEARNING_FORM_INFO WHERE CODE = B.LEARNING_CD) AS LRNTYPE,
+            CASE A.KIND_TYPE
+                WHEN 'D' THEN '단과'
+                WHEN 'J' THEN '종합'
+                WHEN 'N' THEN '선택'
+                WHEN 'P' THEN '패키지'
+                WHEN 'Y' THEN '연회원패키지'
+                ELSE '단과'
+            END KDTYPE,
+            (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = B.SUBJECT_TEACHER) SUBJECT_TEACHER_NM,
+            B.SUBJECT_TITLE, B.SUBJECT_PERIOD, B.SUBJECT_DISCOUNT, B.SUBJECT_PRICE,
+            CASE A.MOVIE_TYPE
+                WHEN '1' THEN B.SUBJECT_MOVIE
+                WHEN '4' THEN B.SUBJECT_MOVIE
+                WHEN '2' THEN B.SUBJECT_PMP
+                WHEN '3' THEN B.SUBJECT_MOVIE_PMP
+                WHEN 'AA' THEN B.SUBJECT_MOVIE_MP4
+                WHEN 'BB' THEN B.SUBJECT_MOVIE_VOD_MP4
+                ELSE B.SUBJECT_PRICE
+            END DISCOUNT_PRICE,
+            CONCAT(B.SUBJECT_OFF_OPEN_YEAR, B.SUBJECT_OFF_OPEN_MONTH, B.SUBJECT_OFF_OPEN_DAY) SUBJECT_SDATE,
+            DATE_FORMAT(NOW(), '%Y%m%d') START_DATE,
+            DATE_FORMAT(DATE_ADD(NOW(), INTERVAL B.SUBJECT_PERIOD - 1 DAY), '%Y%m%d') END_DATE,
+            A.SDATE, A.EDATE,
+            B.LEC_TYPE_CHOICE, B.LEC_SCHEDULE, B.SUBJECT_POINT, B.SUBJECT_SJT_CD
+        FROM TB_CC_CART A
+        INNER JOIN TB_LEC_MST B ON A.LECCODE = B.LECCODE
+        WHERE A.KIND_TYPE IN ('D', 'J', 'N', 'P', 'Y')
+        <if test='MARKING != null and MARKING != ""'>
+            AND A.MARK_ORDERNO = #{MARKING}
+        </if>
+        AND IFNULL(A.REPRICE, 0) <![CDATA[<]]> 1
+        AND A.USER_ID = #{USER_ID}
+    </select>
+
+    <!-- 온라인 도서 장바구니 리스트 조회 -->
+    <select id="cartBookOnList" parameterType="hashMap" resultType="hashMap">
+        SELECT A.SEQ, A.USER_ID, A.LECCODE, A.RSC_ID, A.KIND_TYPE, A.RSC_TYPE,
+            A.BOOK_COUNT, A.REGDATE,
+            B.BOOK_NM, B.BOOK_AUTHOR, B.BOOK_PUBLISHERS,
+            B.PRICE, B.DISCOUNT, B.DISCOUNT_PRICE, B.POINT,
+            B.ATTACH_IMG_S, B.ATTACH_IMG_M, B.COVER_TYPE,
+            CASE B.COVER_TYPE
+                WHEN 'A' THEN '주문가능'
+                WHEN 'S' THEN '품절'
+                WHEN 'O' THEN '절판'
+                WHEN 'N' THEN '신규'
+                ELSE ''
+            END AS COVER_TYPE_NM
+        FROM TB_CC_CART A
+        INNER JOIN TB_CA_BOOK B ON A.RSC_ID = B.RSC_ID
+        WHERE A.KIND_TYPE = 'B'
+        AND A.USER_ID = #{USER_ID}
+    </select>
+
+    <!-- 오프라인 강좌 장바구니 리스트 조회 -->
+    <select id="cartLectureOffList" parameterType="hashMap" resultType="hashMap">
+        SELECT A.SEQ, A.USER_ID, A.LECCODE, A.KIND_TYPE, A.MOVIE_TYPE, A.REGDATE, B.SUBJECT_TEACHER,
+            '' REAPPLYNM,
+            (SELECT SUBSTRING(NAME, 1, 2) FROM TB_LEARNING_FORM_INFO WHERE CODE = B.LEARNING_CD) AS LRNTYPE,
+            CASE A.KIND_TYPE
+                WHEN 'D' THEN '단과'
+                WHEN 'J' THEN '종합'
+                WHEN 'N' THEN '선택'
+                WHEN 'P' THEN '패키지'
+                ELSE '단과'
+            END KDTYPE,
+            (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = B.SUBJECT_TEACHER) SUBJECT_TEACHER_NM,
+            B.SUBJECT_TITLE, 0 SUBJECT_PERIOD, B.SUBJECT_DISCOUNT, B.SUBJECT_PRICE,
+            DATE_FORMAT(NOW(), '%Y%m%d') START_DATE,
+            DATE_FORMAT(NOW(), '%Y%m%d') END_DATE,
+            B.SUBJECT_REAL_PRICE DISCOUNT_PRICE,
+            B.LEC_TYPE_CHOICE, B.LEC_SCHEDULE, B.SUBJECT_TYPE,
+            B.SUBJECT_MEMBER_CNT,
+            (SELECT COUNT(*) FROM TB_OFF_ORDER_MGNT_NO WHERE STATUSCODE = 'DLV105' AND MGNTNO = A.LECCODE) AS Dlv105_Mem
+        FROM TB_OFF_CC_CART A
+        INNER JOIN TB_OFF_LEC_MST B ON A.LECCODE = B.LECCODE
+        WHERE A.KIND_TYPE IN ('D', 'J', 'N', 'P')
+        <if test='MARKING != null and MARKING != ""'>
+            AND A.MARK_ORDERNO = #{MARKING}
+        </if>
+        AND IFNULL(A.REPRICE, 0) <![CDATA[<]]> 1
+        AND A.USER_ID = #{USER_ID}
+    </select>
+
+    <!-- 온라인 장바구니 전체 삭제 -->
+    <delete id="clearOnCartAll" parameterType="hashMap">
+        DELETE FROM TB_CC_CART WHERE USER_ID = #{USER_ID}
+    </delete>
+
+    <!-- 온라인 장바구니 강좌 삭제 (SEQ 기준) -->
+    <delete id="deleteOnCartSeq" parameterType="hashMap">
+        DELETE FROM TB_CC_CART WHERE SEQ = #{SEQ} AND USER_ID = #{USER_ID}
+    </delete>
+
+    <!-- 온라인 장바구니 강좌 삭제 (강좌코드 기준) -->
+    <delete id="deleteOnCartLecCode" parameterType="hashMap">
+        DELETE FROM TB_CC_CART WHERE LECCODE = #{LECCODE} AND USER_ID = #{USER_ID}
+    </delete>
+
+    <!-- 온라인 장바구니 도서 삭제 -->
+    <delete id="deleteOnCartBook" parameterType="hashMap">
+        DELETE FROM TB_CC_CART WHERE RSC_ID = #{RSC_ID} AND KIND_TYPE = 'B' AND USER_ID = #{USER_ID}
+    </delete>
+
+    <!-- 오프라인 장바구니 전체 삭제 -->
+    <delete id="clearOffCartAll" parameterType="hashMap">
+        DELETE FROM TB_OFF_CC_CART WHERE USER_ID = #{USER_ID}
+    </delete>
+
+    <!-- 오프라인 장바구니 강좌 삭제 (SEQ 기준) -->
+    <delete id="deleteOffCartSeq" parameterType="hashMap">
+        DELETE FROM TB_OFF_CC_CART WHERE SEQ = #{SEQ} AND USER_ID = #{USER_ID}
+    </delete>
+
+    <!-- 오프라인 장바구니 강좌 삭제 (강좌코드 기준) -->
+    <delete id="deleteOffCartLecCode" parameterType="hashMap">
+        DELETE FROM TB_OFF_CC_CART WHERE LECCODE = #{LECCODE} AND USER_ID = #{USER_ID}
+    </delete>
+
+    <!-- 회원 정보 조회 -->
+    <select id="getMemberInfo" parameterType="hashMap" resultType="hashMap">
+        SELECT USER_ID, USER_NM, PHONE_NO, EMAIL, ADDRESS1, ADDRESS2, ZIP_CODE, USER_POINT
+        FROM TB_MA_MEMBER
+        WHERE USER_ID = #{USER_ID}
+    </select>
+
+    <!-- 장바구니 도서 포인트 조회 -->
+    <select id="getCartBookPoint" parameterType="hashMap" resultType="String">
+        SELECT IFNULL(SUM(B.POINT * A.BOOK_COUNT), 0) AS POINT
+        FROM TB_CC_CART A
+        INNER JOIN TB_CA_BOOK B ON A.RSC_ID = B.RSC_ID
+        WHERE A.KIND_TYPE = 'B'
+        AND A.USER_ID = #{USER_ID}
+    </select>
+
+    <!-- 장바구니 강좌 포인트 조회 -->
+    <select id="getCartLecPoint" parameterType="hashMap" resultType="String">
+        SELECT IFNULL(SUM(B.SUBJECT_POINT), 0) AS POINT
+        FROM TB_CC_CART A
+        INNER JOIN TB_LEC_MST B ON A.LECCODE = B.LECCODE
+        WHERE A.KIND_TYPE IN ('D', 'J', 'N', 'P', 'Y')
+        AND A.USER_ID = #{USER_ID}
+    </select>
+
+</mapper>

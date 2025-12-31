@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.academy.mapper.OpenLectureMapper">
+
+    <!-- 공개강의 상세 조회 -->
+    <select id="openlectureOnDetail" parameterType="hashMap" resultType="hashMap">
+        SELECT TBL.*
+        FROM (
+            SELECT
+                (SELECT PIC1 FROM TB_MA_MEMBER WHERE USER_ID = A.OPEN_TEACHER) AS OPEN_TEACHER_PIC1,
+                A.SEQ,
+                A.OPENLECCODE,
+                A.CATEGORY_CD,
+                A.OPENBUNRU,
+                A.OPEN_TITLE,
+                A.OPEN_SJT_CD,
+                A.OPEN_TEACHER,
+                A.OPEN_MEMO,
+                A.OPEN_DESC,
+                A.OPEN_HIMOVIE_PATH,
+                A.OPEN_NOMALMOVIE_PATH,
+                A.OPEN_FILE,
+                A.OPEN_ISUSE,
+                A.OPEN_PASSWORD,
+                A.OPEN_POINT,
+                A.OPEN_HIT,
+                A.REG_DT,
+                A.REG_ID,
+                A.UPD_DT,
+                A.UPD_ID,
+                (SELECT SUBJECT_NM FROM TB_SUBJECT_INFO WHERE SUBJECT_CD = A.OPEN_SJT_CD) AS SUBJECT_NM,
+                (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = A.OPEN_TEACHER) AS OPEN_TEACHER_NM,
+                (SELECT NAME FROM TB_CATEGORY_INFO WHERE CODE = A.CATEGORY_CD) AS CATEGORY_NM,
+                (SELECT TITLE FROM TB_MA_MEMBER WHERE USER_ID = A.OPEN_TEACHER) AS TITLE,
+                REPLACE(A.OPEN_FILE, SUBSTRING_INDEX(A.OPEN_FILE, '/', -1), '') AS FILE_LOCATION,
+                SUBSTRING_INDEX(A.OPEN_FILE, '/', -1) AS FILE_NAME
+            FROM TB_OPENLEC_MST A
+        ) TBL
+        WHERE TBL.OPENLECCODE = #{OPENLECCODE}
+    </select>
+
+    <!-- 공개강의 목록 조회 -->
+    <select id="openlectureOnList" parameterType="hashMap" resultType="hashMap">
+        SELECT TBL.*
+        FROM (
+            SELECT
+                OP.SEQ,
+                OP.OPENLECCODE,
+                OP.CATEGORY_CD,
+                (SELECT NAME FROM TB_CATEGORY_INFO WHERE CODE = OP.CATEGORY_CD) AS CATEGORY_NM,
+                OP.OPENBUNRU,
+                OP.OPEN_TITLE,
+                OP.OPEN_SJT_CD,
+                (SELECT SUBJECT_NM FROM TB_SUBJECT_INFO WHERE SUBJECT_CD = OP.OPEN_SJT_CD) AS OPEN_NM,
+                (SELECT PIC1 FROM TB_MA_MEMBER WHERE USER_ID = OP.OPEN_TEACHER) AS OPEN_TEACHER_PIC1,
+                OP.OPEN_TEACHER,
+                (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = OP.OPEN_TEACHER) AS OPEN_TEACHER_NM,
+                OP.OPEN_MEMO,
+                OP.OPEN_DESC,
+                OP.OPEN_HIMOVIE_PATH,
+                OP.OPEN_NOMALMOVIE_PATH,
+                OP.OPEN_FILE,
+                OP.OPEN_ISUSE,
+                OP.OPEN_PASSWORD,
+                OP.OPEN_POINT,
+                OP.OPEN_HIT,
+                DATE_FORMAT(OP.REG_DT, '%Y-%m-%d') REG_DT,
+                OP.REG_ID,
+                OP.UPD_DT,
+                OP.UPD_ID
+            FROM TB_OPENLEC_MST OP
+        ) TBL
+        WHERE 1 = 1
+        <choose>
+            <when test='SEARCHBUNRU != null and SEARCHBUNRU != ""'>
+                AND OPENBUNRU = #{SEARCHBUNRU}
+            </when>
+            <otherwise>
+                AND OPENBUNRU = '1001'
+            </otherwise>
+        </choose>
+        <if test='CATEGORY_CD != null and CATEGORY_CD != ""'>
+            AND TBL.CATEGORY_CD = #{CATEGORY_CD}
+        </if>
+        <if test='SEARCHTEXT != null and SEARCHTEXT != ""'>
+            <if test='SEARCHTYPE != null and SEARCHTYPE != ""'>
+                <if test='SEARCHTYPE == "SUBJECT_TITLE"'>
+                    AND TBL.OPEN_TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                </if>
+                <if test='SEARCHTYPE == "SUBJECT_TEACHER_NM"'>
+                    AND TBL.OPEN_TEACHER_NM LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                </if>
+            </if>
+            <if test='SEARCHTYPE == null or SEARCHTYPE == ""'>
+                AND (
+                    TBL.OPEN_TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                    OR TBL.OPEN_TEACHER_NM LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                )
+            </if>
+        </if>
+        ORDER BY TBL.SEQ DESC
+    </select>
+
+</mapper>

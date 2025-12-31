@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.academy.mapper.BoardNoticeMapper">
+
+    <!-- 게시판 정보 조회 -->
+    <select id="getBoardInfo" parameterType="hashMap" resultType="hashMap">
+        SELECT * FROM TB_BOARD_MNG
+        WHERE BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+    </select>
+
+    <!-- 게시판 정보 목록 조회 -->
+    <select id="getBoardInfoList" parameterType="hashMap" resultType="hashMap">
+        SELECT * FROM TB_BOARD_MNG
+        WHERE 1 = 1
+        <if test='BRD_MNG_LIST != null'>
+            AND BOARD_MNG_SEQ IN
+            <foreach collection="BRD_MNG_LIST" item="item" index="index" open="(" separator="," close=")">
+                #{item}
+            </foreach>
+        </if>
+    </select>
+
+    <!-- 메인 게시판 목록 조회 -->
+    <select id="getMainBoardList" parameterType="hashMap" resultType="hashMap">
+        SELECT BOARD_SEQ, SUBJECT, CATEGORY_CODE, REG_DT
+        FROM (
+            SELECT A.BOARD_SEQ, A.SUBJECT, B.CATEGORY_CODE, DATE_FORMAT(A.REG_DT, '%Y-%m-%d') REG_DT,
+                   ROW_NUMBER() OVER (PARTITION BY B.CATEGORY_CODE ORDER BY A.REG_DT DESC) AS CATEGORY_CODE_ORDER
+            FROM TB_BOARD A, TB_BOARD_CATEGORY_INFO B
+            WHERE A.BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+                AND OPEN_YN = 'Y'
+                AND A.BOARD_SEQ = B.BOARD_SEQ
+                AND A.BOARD_MNG_SEQ = B.BOARD_MNG_SEQ
+            <if test='topMenu != null and topMenu != "" and topMenu != "MAIN"'>
+                AND B.CATEGORY_CODE = #{topMenu}
+            </if>
+            ORDER BY A.REG_DT DESC
+        ) T
+        WHERE CATEGORY_CODE_ORDER = 1
+        LIMIT 5
+    </select>
+
+    <!-- 게시글 목록 조회 -->
+    <select id="boardList" parameterType="hashMap" resultType="hashMap">
+        SELECT * FROM (
+            SELECT A.*, @rownum := @rownum + 1 AS rnum
+            FROM (
+                SELECT DISTINCT
+                    (SELECT NAME FROM TB_CATEGORY_INFO WHERE CODE = #{topMenu}) CODENAME,
+                    bb.BOARD_SEQ,
+                    bb.SUBJECT,
+                    bb.FILE_PATH,
+                    (SELECT FILE_NAME FROM TB_BOARD_FILE WHERE BOARD_SEQ = BB.BOARD_SEQ LIMIT 1) FILE_NAME,
+                    bb.PARENT_BOARD_SEQ,
+                    bb.NOTICE_TOP_YN,
+                    bb.REG_ID,
+                    DATE_FORMAT(bb.REG_DT, '%Y-%m-%d') REG_DT,
+                    bb.REG_DT AS SORT_DT,
+                    bb.UPD_ID,
+                    DATE_FORMAT(bb.UPD_DT, '%Y-%m-%d') UPD_DT,
+                    bb.HITS,
+                    CONCAT(LEFT(bb.CREATENAME, 4), '*') CREATENAME,
+                    bb.THUMBNAIL_FILE_PATH,
+                    bb.THUMBNAIL_FILE_NAME,
+                    bb.THUMBNAIL_FILE_REAL_NAME,
+                    (SELECT COUNT(VOTING) FROM TB_BOARD_VOTING
+                        WHERE BOARD_MNG_SEQ = bb.BOARD_MNG_SEQ
+                        AND BOARD_SEQ = bb.BOARD_SEQ
+                        AND ISTYPE = 'R' AND VOTING = 'Y') VOTINGY_CNT,
+                    (SELECT COUNT(SEQ) FROM TB_BOARD_COMMENT
+                        WHERE BOARD_MNG_SEQ = bb.BOARD_MNG_SEQ
+                        AND BOARD_SEQ = bb.BOARD_SEQ) MEMO_CNT,
+                    bb.EXAM_TYPE, bb.EXAM_AREA,
+                    (SELECT CODE_NM FROM TB_COMMON_CODE WHERE CODE_TYPE = 'PUB_TYPE' AND CODE = bb.EXAM_TYPE) EXAM_TYPE_NM,
+                    (SELECT CODE_NM FROM TB_COMMON_CODE WHERE CODE_TYPE = 'PUB_AREA' AND CODE = bb.EXAM_AREA) EXAM_AREA_NM,
+                    (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = bb.REG_ID) USER_NM,
+                    CASE WHEN DATEDIFF(NOW(), bb.REG_DT) <![CDATA[<=]]> 10 THEN 'Y' ELSE 'N' END AS NEW_YN
+                FROM TB_BOARD_CATEGORY_INFO aa, TB_BOARD bb, TB_BOARD_MNG cc
+                WHERE cc.BOARD_MNG_SEQ = aa.BOARD_MNG_SEQ
+                    AND aa.BOARD_MNG_SEQ = bb.BOARD_MNG_SEQ
+                    <if test='topMenu != null and topMenu != "" and topMenu != "MAIN"'>
+                        AND aa.CATEGORY_CODE = #{topMenu}
+                    </if>
+                    AND bb.OPEN_YN = 'Y'
+                    AND aa.BOARD_SEQ = bb.BOARD_SEQ
+                    AND aa.BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+                    AND bb.BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+                    AND cc.BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+                    <if test="SCH_EXAM_TYPE != null and SCH_EXAM_TYPE != ''">
+                        AND bb.EXAM_TYPE = #{SCH_EXAM_TYPE}
+                    </if>
+                    <if test="SCH_EXAM_AREA != null and SCH_EXAM_AREA != ''">
+                        AND bb.EXAM_AREA = #{SCH_EXAM_AREA}
+                    </if>
+                    <if test="SEARCHTEXT != null and SEARCHTEXT != ''">
+                        <choose>
+                            <when test='SEARCHKIND == "SEARCHSUBJECT"'>
+                                AND bb.SUBJECT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                            </when>
+                            <when test='SEARCHKIND == "SEARCHCONTENT"'>
+                                AND bb.CONTENT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                            </when>
+                            <otherwise>
+                                AND (bb.SUBJECT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                                    OR bb.CONTENT LIKE CONCAT('%', #{SEARCHTEXT}, '%'))
+                            </otherwise>
+                        </choose>
+                    </if>
+                    <if test='DIVICE_TYPE != null and DIVICE_TYPE != ""'>
+                        <choose>
+                            <when test='DIVICE_TYPE == "PC"'>
+                                AND (bb.DIVICE_TYPE = '1' OR bb.DIVICE_TYPE = '3')
+                            </when>
+                            <when test='DIVICE_TYPE == "MO"'>
+                                AND (bb.DIVICE_TYPE = '2' OR bb.DIVICE_TYPE = '3')
+                            </when>
+                            <otherwise>
+                                AND (bb.DIVICE_TYPE = '1' OR bb.DIVICE_TYPE = '2' OR bb.DIVICE_TYPE = '3')
+                            </otherwise>
+                        </choose>
+                    </if>
+                ORDER BY bb.NOTICE_TOP_YN DESC, bb.BOARD_SEQ DESC
+            ) A, (SELECT @rownum := 0) r
+        ) T
+        WHERE rnum > #{startNo} AND rnum <![CDATA[<=]]> #{endNo}
+    </select>
+
+    <!-- 게시글 건수 조회 -->
+    <select id="boardListCount" parameterType="hashMap" resultType="int">
+        SELECT COUNT(DISTINCT bb.BOARD_SEQ) CNT
+        FROM TB_BOARD_CATEGORY_INFO aa, TB_BOARD bb, TB_BOARD_MNG cc
+        WHERE cc.BOARD_MNG_SEQ = aa.BOARD_MNG_SEQ
+            AND aa.BOARD_MNG_SEQ = bb.BOARD_MNG_SEQ
+            <if test='topMenu != null and topMenu != "" and topMenu != "MAIN"'>
+                AND aa.CATEGORY_CODE = #{topMenu}
+            </if>
+            AND bb.OPEN_YN = 'Y'
+            AND aa.BOARD_SEQ = bb.BOARD_SEQ
+            AND aa.BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+            AND bb.BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+            AND cc.BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+            <if test="SCH_EXAM_TYPE != null and SCH_EXAM_TYPE != ''">
+                AND bb.EXAM_TYPE = #{SCH_EXAM_TYPE}
+            </if>
+            <if test="SCH_EXAM_AREA != null and SCH_EXAM_AREA != ''">
+                AND bb.EXAM_AREA = #{SCH_EXAM_AREA}
+            </if>
+            <if test="SEARCHTEXT != null and SEARCHTEXT != ''">
+                <choose>
+                    <when test='SEARCHKIND == "SEARCHSUBJECT"'>
+                        AND bb.SUBJECT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                    </when>
+                    <when test='SEARCHKIND == "SEARCHCONTENT"'>
+                        AND bb.CONTENT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                    </when>
+                    <otherwise>
+                        AND (bb.SUBJECT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                            OR bb.CONTENT LIKE CONCAT('%', #{SEARCHTEXT}, '%'))
+                    </otherwise>
+                </choose>
+            </if>
+            <if test='DIVICE_TYPE != null and DIVICE_TYPE != ""'>
+                <choose>
+                    <when test='DIVICE_TYPE == "PC"'>
+                        AND (bb.DIVICE_TYPE = '1' OR bb.DIVICE_TYPE = '3')
+                    </when>
+                    <when test='DIVICE_TYPE == "MO"'>
+                        AND (bb.DIVICE_TYPE = '2' OR bb.DIVICE_TYPE = '3')
+                    </when>
+                    <otherwise>
+                        AND (bb.DIVICE_TYPE = '1' OR bb.DIVICE_TYPE = '2' OR bb.DIVICE_TYPE = '3')
+                    </otherwise>
+                </choose>
+            </if>
+    </select>
+
+    <!-- 조회수 증가 -->
+    <update id="updateBoardHits" parameterType="hashMap">
+        UPDATE TB_BOARD SET HITS = HITS + 1 WHERE BOARD_SEQ = #{BOARD_SEQ}
+    </update>
+
+    <!-- 게시글 상세 조회 -->
+    <select id="boardView" parameterType="hashMap" resultType="hashMap">
+        SELECT
+            BOARD_MNG_SEQ,
+            BOARD_SEQ,
+            OPEN_YN,
+            SUBJECT,
+            CONTENT,
+            ANSWER,
+            FILE_PATH,
+            FILE_NAME,
+            REAL_FILE_NAME,
+            PARENT_BOARD_SEQ,
+            NOTICE_TOP_YN,
+            DATE_FORMAT(REG_DT, '%Y-%m-%d') REG_DT,
+            REG_ID,
+            (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = a.REG_ID) USER_NM,
+            DATE_FORMAT(UPD_DT, '%Y-%m-%d') UPD_DT,
+            UPD_ID,
+            HITS,
+            CONCAT(LEFT(CREATENAME, 4), '*') CREATENAME,
+            THUMBNAIL_FILE_PATH,
+            THUMBNAIL_FILE_NAME,
+            THUMBNAIL_FILE_REAL_NAME,
+            ISSUE,
+            EXAM_TYPE,
+            EXAM_AREA,
+            EXAM_CATE,
+            EXAM_SUB,
+            PROF_ID,
+            MOCKCODE,
+            BOARD_REPLY,
+            (SELECT COUNT(VOTING) FROM TB_BOARD_VOTING
+                WHERE BOARD_MNG_SEQ = a.BOARD_MNG_SEQ
+                AND BOARD_SEQ = a.BOARD_SEQ
+                AND ISTYPE = 'R' AND VOTING = 'Y') VOTINGY_CNT
+        FROM TB_BOARD a
+        WHERE BOARD_SEQ = #{BOARD_SEQ}
+            AND BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+    </select>
+
+    <!-- FAQ 목록 조회 -->
+    <select id="boardFAQList" parameterType="hashMap" resultType="hashMap">
+        SELECT
+            bb.BOARD_SEQ,
+            bb.SUBJECT,
+            bb.CONTENT,
+            bb.ANSWER,
+            DATE_FORMAT(bb.REG_DT, '%Y-%m-%d') REG_DT,
+            bb.HITS,
+            aa.CATEGORY_CODE,
+            (SELECT NAME FROM TB_CATEGORY_INFO WHERE CODE = aa.CATEGORY_CODE) CATEGORY_NM
+        FROM TB_BOARD_CATEGORY_INFO aa, TB_BOARD bb
+        WHERE aa.BOARD_MNG_SEQ = bb.BOARD_MNG_SEQ
+            AND aa.BOARD_SEQ = bb.BOARD_SEQ
+            AND bb.OPEN_YN = 'Y'
+            AND aa.BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+            <if test='topMenu != null and topMenu != ""'>
+                AND aa.CATEGORY_CODE = #{topMenu}
+            </if>
+        ORDER BY bb.NOTICE_TOP_YN DESC, bb.BOARD_SEQ DESC
+    </select>
+
+</mapper>
