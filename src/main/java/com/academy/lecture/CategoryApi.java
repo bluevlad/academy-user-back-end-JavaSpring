@@ -3,8 +3,8 @@ package com.academy.lecture;
 import com.academy.common.CommonUtil;
 import com.academy.common.CORSFilter;
 import com.academy.lecture.service.CategoryService;
+import com.academy.lecture.service.CategoryVO;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -41,15 +41,14 @@ public class CategoryApi extends CORSFilter {
     @Operation(summary = "직렬-과목 리스트 조회", description = "카테고리와 직렬에 따른 과목 목록을 조회합니다.")
     @GetMapping("/getSeriesSubject")
     public JSONObject getSeriesSubject(
-            @Parameter(description = "카테고리 코드") @RequestParam(required = false) String searchCategoryCode,
-            @Parameter(description = "직렬 코드") @RequestParam(required = false) String searchSeriesCode,
+            @ModelAttribute("CategoryVO") CategoryVO categoryVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
+        setParam(params, categoryVO, request);
 
-        params.put("CATEGORY_CD", CommonUtil.isNull(searchCategoryCode, params.get("topMenu")));
-        params.put("SERIES_CD", CommonUtil.isNull(searchSeriesCode, ""));
+        params.put("CATEGORY_CD", CommonUtil.isNull(categoryVO.getSearchCategoryCode(), params.get("topMenu")));
+        params.put("SERIES_CD", CommonUtil.isNull(categoryVO.getSearchSeriesCode(), ""));
 
         List<HashMap<String, Object>> resultList = categoryService.selectSeriesSubject(params);
 
@@ -66,17 +65,15 @@ public class CategoryApi extends CORSFilter {
     @Operation(summary = "직렬-과목-교수 리스트 조회", description = "카테고리, 직렬, 과목에 따른 교수 목록을 조회합니다.")
     @GetMapping("/getSeriesProf")
     public JSONObject getSeriesProf(
-            @Parameter(description = "카테고리 코드") @RequestParam(required = false) String searchCategoryCode,
-            @Parameter(description = "직렬 코드") @RequestParam(required = false) String searchSeriesCode,
-            @Parameter(description = "과목 코드") @RequestParam(required = false) String searchSubjectCode,
+            @ModelAttribute("CategoryVO") CategoryVO categoryVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
+        setParam(params, categoryVO, request);
 
-        params.put("CATEGORY_CD", CommonUtil.isNull(searchCategoryCode, params.get("topMenu")));
-        params.put("SERIES_CD", CommonUtil.isNull(searchSeriesCode, ""));
-        params.put("SUBJECT_CD", CommonUtil.isNull(searchSubjectCode, ""));
+        params.put("CATEGORY_CD", CommonUtil.isNull(categoryVO.getSearchCategoryCode(), params.get("topMenu")));
+        params.put("SERIES_CD", CommonUtil.isNull(categoryVO.getSearchSeriesCode(), ""));
+        params.put("SUBJECT_CD", CommonUtil.isNull(categoryVO.getSearchSubjectCode(), ""));
 
         List<HashMap<String, Object>> resultList = categoryService.selectSeriesProf(params);
 
@@ -93,13 +90,13 @@ public class CategoryApi extends CORSFilter {
     @Operation(summary = "카테고리 트리 리스트 조회", description = "카테고리 트리 구조 목록을 조회합니다.")
     @GetMapping("/getCategoryTree")
     public JSONObject getCategoryTree(
-            @Parameter(description = "검색할 카테고리 코드") @RequestParam(required = false) String searchCat,
+            @ModelAttribute("CategoryVO") CategoryVO categoryVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
+        setParam(params, categoryVO, request);
 
-        params.put("SEARCHCAT", CommonUtil.isNull(searchCat, ""));
+        params.put("SEARCHCAT", CommonUtil.isNull(categoryVO.getSearchCat(), ""));
 
         List<HashMap<String, Object>> resultList = categoryService.getSeriesCate(params);
 
@@ -116,13 +113,13 @@ public class CategoryApi extends CORSFilter {
     @Operation(summary = "서브 메인화면 과목 목록 조회", description = "서브 메인화면에 표시할 과목 목록을 조회합니다.")
     @GetMapping("/getSubMainSubjectList")
     public JSONObject getSubMainSubjectList(
-            @Parameter(description = "카테고리 코드") @RequestParam(required = false) String searchCategoryCode,
+            @ModelAttribute("CategoryVO") CategoryVO categoryVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
+        setParam(params, categoryVO, request);
 
-        params.put("CATEGORY_CD", CommonUtil.isNull(searchCategoryCode, params.get("topMenu")));
+        params.put("CATEGORY_CD", CommonUtil.isNull(categoryVO.getSearchCategoryCode(), params.get("topMenu")));
 
         List<HashMap<String, Object>> resultList = categoryService.selectSubMainCateSubjectList(params);
 
@@ -139,13 +136,13 @@ public class CategoryApi extends CORSFilter {
     @Operation(summary = "서브 메인화면 교수 목록 조회", description = "서브 메인화면에 표시할 교수 목록을 조회합니다.")
     @GetMapping("/getSubMainTeacherList")
     public JSONObject getSubMainTeacherList(
-            @Parameter(description = "카테고리 코드") @RequestParam(required = false) String searchCategoryCode,
+            @ModelAttribute("CategoryVO") CategoryVO categoryVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
+        setParam(params, categoryVO, request);
 
-        params.put("CATEGORY_CD", CommonUtil.isNull(searchCategoryCode, params.get("topMenu")));
+        params.put("CATEGORY_CD", CommonUtil.isNull(categoryVO.getSearchCategoryCode(), params.get("topMenu")));
 
         List<HashMap<String, Object>> resultList = categoryService.selectSubMainCateTeacherList(params);
 
@@ -160,9 +157,9 @@ public class CategoryApi extends CORSFilter {
      * 파라미터 설정
      */
     @SuppressWarnings("unchecked")
-    private void setParam(HashMap<String, String> params, HttpServletRequest request) {
+    private void setParam(HashMap<String, String> params, CategoryVO categoryVO, HttpServletRequest request) {
         HttpSession session = request.getSession(false);
-        String link = CommonUtil.isNull(request.getParameter("link"), "");
+        String link = CommonUtil.isNull(categoryVO.getLink(), "");
 
         if (link.equals("link")) {
             params.put("USER_ID", "");
@@ -187,11 +184,11 @@ public class CategoryApi extends CORSFilter {
             }
         }
 
-        params.put("topMenuType", CommonUtil.isNull(request.getParameter("topMenuType"), "F"));
-        params.put("topMenu", CommonUtil.isNull(request.getParameter("topMenu"), "001"));
-        params.put("leftMenuLType", CommonUtil.isNull(request.getParameter("leftMenuLType"), "M0101"));
-        params.put("currentPage", CommonUtil.isNull(request.getParameter("currentPage"), "1"));
-        params.put("pageRow", CommonUtil.isNull(request.getParameter("pageRow"), String.valueOf(pageUnit)));
+        params.put("topMenuType", CommonUtil.isNull(categoryVO.getTopMenuType(), "F"));
+        params.put("topMenu", CommonUtil.isNull(categoryVO.getTopMenu(), "001"));
+        params.put("leftMenuLType", CommonUtil.isNull(categoryVO.getLeftMenuLType(), "M0101"));
+        params.put("currentPage", String.valueOf(categoryVO.getCurrentPage() > 0 ? categoryVO.getCurrentPage() : 1));
+        params.put("pageRow", String.valueOf(categoryVO.getPageRow() > 0 ? categoryVO.getPageRow() : pageUnit));
     }
 
 }

@@ -6,7 +6,6 @@ import com.academy.common.PaginationInfo;
 import com.academy.teacher.service.TeacherService;
 import com.academy.teacher.service.TeacherVO;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -43,17 +42,15 @@ public class TeacherApi extends CORSFilter {
     @Operation(summary = "교수 리스트 조회", description = "카테고리별 교수 목록을 조회합니다.")
     @GetMapping("/getTeacherList")
     public JSONObject getTeacherList(
-            @Parameter(description = "카테고리 코드") @RequestParam(required = false) String searchCategoryCode,
-            @Parameter(description = "과목 코드") @RequestParam(required = false) String searchSubjectCode,
-            @Parameter(description = "온/오프라인 구분 (O/F)") @RequestParam(defaultValue = "O") String topMenuType,
+            @ModelAttribute("TeacherVO") TeacherVO teacherVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
         setParam(params, request);
 
-        params.put("searchCategoryCode", CommonUtil.isNull(searchCategoryCode, params.get("topMenu")));
-        params.put("searchSubjectCode", CommonUtil.isNull(searchSubjectCode, ""));
-        params.put("topMenuType", topMenuType);
+        params.put("searchCategoryCode", CommonUtil.isNull(teacherVO.getSearchCategoryCode(), params.get("topMenu")));
+        params.put("searchSubjectCode", CommonUtil.isNull(teacherVO.getSearchSubjectCode(), ""));
+        params.put("topMenuType", CommonUtil.isNull(teacherVO.getTopMenuType(), "O"));
 
         List<HashMap<String, Object>> resultList = teacherService.teacherList(params);
 
@@ -70,15 +67,14 @@ public class TeacherApi extends CORSFilter {
     @Operation(summary = "좌측 교수 리스트 조회", description = "좌측 메뉴용 교수 목록을 조회합니다.")
     @GetMapping("/getLeftTeacherList")
     public JSONObject getLeftTeacherList(
-            @Parameter(description = "카테고리 코드") @RequestParam(required = false) String searchCategoryCode,
-            @Parameter(description = "온/오프라인 구분 (O/F)") @RequestParam(defaultValue = "O") String topMenuType,
+            @ModelAttribute("TeacherVO") TeacherVO teacherVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
         setParam(params, request);
 
-        params.put("searchCategoryCode", CommonUtil.isNull(searchCategoryCode, params.get("topMenu")));
-        params.put("topMenuType", topMenuType);
+        params.put("searchCategoryCode", CommonUtil.isNull(teacherVO.getSearchCategoryCode(), params.get("topMenu")));
+        params.put("topMenuType", CommonUtil.isNull(teacherVO.getTopMenuType(), "O"));
 
         List<HashMap<String, Object>> resultList = teacherService.leftTeacherList(params);
 
@@ -95,15 +91,14 @@ public class TeacherApi extends CORSFilter {
     @Operation(summary = "카테고리별 과목 리스트 조회", description = "카테고리에 해당하는 과목 목록을 조회합니다.")
     @GetMapping("/getSubjectList")
     public JSONObject getSubjectList(
-            @Parameter(description = "카테고리 코드") @RequestParam(required = false) String searchCategoryCode,
-            @Parameter(description = "온/오프라인 구분 (O/F)") @RequestParam(defaultValue = "O") String topMenuType,
+            @ModelAttribute("TeacherVO") TeacherVO teacherVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
         setParam(params, request);
 
-        params.put("searchCategoryCode", CommonUtil.isNull(searchCategoryCode, params.get("topMenu")));
-        params.put("topMenuType", topMenuType);
+        params.put("searchCategoryCode", CommonUtil.isNull(teacherVO.getSearchCategoryCode(), params.get("topMenu")));
+        params.put("topMenuType", CommonUtil.isNull(teacherVO.getTopMenuType(), "O"));
 
         List<HashMap<String, Object>> resultList = teacherService.subjectListByCategory(params);
 
@@ -120,13 +115,13 @@ public class TeacherApi extends CORSFilter {
     @Operation(summary = "교수 상세 정보 조회", description = "교수의 상세 정보를 조회합니다.")
     @GetMapping("/getTeacherDetail")
     public JSONObject getTeacherDetail(
-            @Parameter(description = "교수 ID", required = true) @RequestParam String searchUserId,
+            @ModelAttribute("TeacherVO") TeacherVO teacherVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
         setParam(params, request);
 
-        params.put("searchUserId", searchUserId);
+        params.put("searchUserId", teacherVO.getSearchUserId());
 
         HashMap<String, Object> teacherInfo = teacherService.teacherDetail(params);
         List<HashMap<String, Object>> bookLogList = teacherService.teacherBookLog(params);
@@ -145,15 +140,14 @@ public class TeacherApi extends CORSFilter {
     @Operation(summary = "교수 오프라인 강의 목록 조회", description = "교수의 오프라인 강의 목록을 조회합니다.")
     @GetMapping("/getTeacherLectureList")
     public JSONObject getTeacherLectureList(
-            @Parameter(description = "교수 ID", required = true) @RequestParam String searchUserId,
-            @Parameter(description = "카테고리 코드") @RequestParam(required = false) String searchCategoryCode,
+            @ModelAttribute("TeacherVO") TeacherVO teacherVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
         setParam(params, request);
 
-        params.put("searchUserId", searchUserId);
-        params.put("searchCategoryCode", CommonUtil.isNull(searchCategoryCode, params.get("topMenu")));
+        params.put("searchUserId", teacherVO.getSearchUserId());
+        params.put("searchCategoryCode", CommonUtil.isNull(teacherVO.getSearchCategoryCode(), params.get("topMenu")));
 
         List<HashMap<String, Object>> lectureList = teacherService.teacherLectureList(params);
         List<HashMap<String, Object>> bookList = teacherService.teacherLectureBookList(params);
@@ -172,19 +166,16 @@ public class TeacherApi extends CORSFilter {
     @Operation(summary = "교수 온라인 강의 목록 조회", description = "교수의 온라인 강의 목록을 조회합니다.")
     @GetMapping("/getTeacherMovieLectureList")
     public JSONObject getTeacherMovieLectureList(
-            @Parameter(description = "교수 ID", required = true) @RequestParam String searchUserId,
-            @Parameter(description = "카테고리 코드") @RequestParam(required = false) String searchCategoryCode,
-            @Parameter(description = "학습 형태 코드") @RequestParam(required = false) String searchLearningCd,
-            @Parameter(description = "강의 유형") @RequestParam(required = false) String lecTypeChoice,
+            @ModelAttribute("TeacherVO") TeacherVO teacherVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
         setParam(params, request);
 
-        params.put("searchUserId", searchUserId);
-        params.put("searchCategoryCode", CommonUtil.isNull(searchCategoryCode, params.get("topMenu")));
-        params.put("searchLearningCd", CommonUtil.isNull(searchLearningCd, ""));
-        params.put("LEC_TYPE_CHOICE", CommonUtil.isNull(lecTypeChoice, "D"));
+        params.put("searchUserId", teacherVO.getSearchUserId());
+        params.put("searchCategoryCode", CommonUtil.isNull(teacherVO.getSearchCategoryCode(), params.get("topMenu")));
+        params.put("searchLearningCd", CommonUtil.isNull(teacherVO.getSearchLearningCd(), ""));
+        params.put("LEC_TYPE_CHOICE", CommonUtil.isNull(teacherVO.getLecTypeChoice(), "D"));
 
         List<HashMap<String, Object>> lectureList = teacherService.teacherMovieLectureList(params);
         List<HashMap<String, Object>> bookList = teacherService.teacherMovieLectureBookList(params);
@@ -203,15 +194,14 @@ public class TeacherApi extends CORSFilter {
     @Operation(summary = "교수 온라인 강의 베스트 목록 조회", description = "교수의 베스트 온라인 강의 목록을 조회합니다.")
     @GetMapping("/getTeacherMovieLectureBestList")
     public JSONObject getTeacherMovieLectureBestList(
-            @Parameter(description = "교수 ID", required = true) @RequestParam String searchUserId,
-            @Parameter(description = "카테고리 코드") @RequestParam(required = false) String searchCategoryCode,
+            @ModelAttribute("TeacherVO") TeacherVO teacherVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
         setParam(params, request);
 
-        params.put("searchUserId", searchUserId);
-        params.put("searchCategoryCode", CommonUtil.isNull(searchCategoryCode, params.get("topMenu")));
+        params.put("searchUserId", teacherVO.getSearchUserId());
+        params.put("searchCategoryCode", CommonUtil.isNull(teacherVO.getSearchCategoryCode(), params.get("topMenu")));
         params.put("LEC_TYPE_CHOICE", "D");
 
         List<HashMap<String, Object>> resultList = teacherService.teacherMovieLectureBestList(params);
@@ -229,23 +219,19 @@ public class TeacherApi extends CORSFilter {
     @Operation(summary = "교수 게시판 목록 조회", description = "교수의 게시판 목록을 조회합니다.")
     @GetMapping("/getTeacherBoardList")
     public JSONObject getTeacherBoardList(
-            @Parameter(description = "교수 ID", required = true) @RequestParam String searchUserId,
-            @Parameter(description = "게시판 관리 SEQ") @RequestParam(required = false) String boardMngSeq,
-            @Parameter(description = "현재 페이지") @RequestParam(defaultValue = "1") int currentPage,
-            @Parameter(description = "페이지당 건수") @RequestParam(required = false) Integer pageRow,
-            @Parameter(description = "검색어") @RequestParam(required = false) String searchText,
-            @Parameter(description = "검색 종류") @RequestParam(required = false) String searchKind,
+            @ModelAttribute("TeacherVO") TeacherVO teacherVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
         setParam(params, request);
 
-        params.put("searchUserId", searchUserId);
-        params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardMngSeq, "BOARD_002"));
-        params.put("SEARCHTEXT", CommonUtil.isNull(searchText, ""));
-        params.put("SEARCHKIND", CommonUtil.isNull(searchKind, ""));
+        params.put("searchUserId", teacherVO.getSearchUserId());
+        params.put("BOARD_MNG_SEQ", CommonUtil.isNull(teacherVO.getBoardMngSeq(), "BOARD_002"));
+        params.put("SEARCHTEXT", CommonUtil.isNull(teacherVO.getSearchText(), ""));
+        params.put("SEARCHKIND", CommonUtil.isNull(teacherVO.getSearchKind(), ""));
 
-        int recordCountPerPage = pageRow != null ? pageRow : pageUnit;
+        int currentPage = teacherVO.getCurrentPage() > 0 ? teacherVO.getCurrentPage() : 1;
+        int recordCountPerPage = teacherVO.getPageRow() > 0 ? teacherVO.getPageRow() : pageUnit;
 
         PaginationInfo paginationInfo = new PaginationInfo();
         paginationInfo.setCurrentPageNo(currentPage);
@@ -276,9 +262,10 @@ public class TeacherApi extends CORSFilter {
     @Operation(summary = "강의 장바구니 담기", description = "강의를 장바구니에 담습니다.")
     @PostMapping("/addToCart")
     public JSONObject addToCart(
-            @RequestBody HashMap<String, String> params,
+            @ModelAttribute("TeacherVO") TeacherVO teacherVO,
             HttpServletRequest request) throws Exception {
 
+        HashMap<String, String> params = new HashMap<>();
         setParam(params, request);
 
         HashMap<String, Object> jsonObject = new HashMap<>();
@@ -291,7 +278,8 @@ public class TeacherApi extends CORSFilter {
         }
 
         try {
-            String kindType = CommonUtil.isNull(params.get("KIND_TYPE"), "L");
+            String kindType = CommonUtil.isNull(teacherVO.getLecTypeChoice(), "L");
+            params.put("KIND_TYPE", kindType);
 
             // 장바구니 중복 체크
             List<HashMap<String, Object>> cartCheck;

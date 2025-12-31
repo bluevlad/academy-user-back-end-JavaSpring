@@ -4,8 +4,8 @@ import com.academy.common.CommonUtil;
 import com.academy.common.CORSFilter;
 import com.academy.common.JwtUtil;
 import com.academy.login.service.LoginService;
+import com.academy.login.service.LoginVO;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -40,13 +40,13 @@ public class LoginApi extends CORSFilter {
     @Operation(summary = "로그인", description = "사용자 로그인을 처리하고 JWT 토큰을 발급합니다.")
     @PostMapping("/login")
     public JSONObject login(
-            @RequestBody HashMap<String, String> params,
+            @ModelAttribute("LoginVO") LoginVO loginVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
-        String userId = CommonUtil.isNull(params.get("USER_ID"), "");
-        String userPwd = CommonUtil.isNull(params.get("userPwd"), "");
+        String userId = CommonUtil.isNull(loginVO.getUserId(), "");
+        String userPwd = CommonUtil.isNull(loginVO.getUserPwd(), "");
 
         if (userId.isEmpty() || userPwd.isEmpty()) {
             jsonObject.put("retMsg", "FAIL");
@@ -54,6 +54,7 @@ public class LoginApi extends CORSFilter {
             return new JSONObject(jsonObject);
         }
 
+        HashMap<String, String> params = new HashMap<>();
         params.put("USER_ID", userId);
         params.put("userPwd", userPwd);
 
@@ -125,10 +126,10 @@ public class LoginApi extends CORSFilter {
     @Operation(summary = "회원 ID 중복 체크", description = "회원가입 시 ID 중복 여부를 확인합니다.")
     @GetMapping("/checkId")
     public JSONObject checkId(
-            @Parameter(description = "사용자 ID", required = true) @RequestParam String userId) throws Exception {
+            @ModelAttribute("LoginVO") LoginVO loginVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        params.put("USER_ID", userId);
+        params.put("USER_ID", loginVO.getUserId());
 
         int count = loginService.memberIdCheck(params);
 
@@ -169,21 +170,30 @@ public class LoginApi extends CORSFilter {
     @Operation(summary = "회원가입", description = "새로운 회원을 등록합니다.")
     @PostMapping("/register")
     public JSONObject register(
-            @RequestBody HashMap<String, String> params,
+            @ModelAttribute("LoginVO") LoginVO loginVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
         // 필수 항목 체크
-        String userId = CommonUtil.isNull(params.get("USER_ID"), "");
-        String userPwd = CommonUtil.isNull(params.get("USER_PWD"), "");
-        String userNm = CommonUtil.isNull(params.get("USER_NM"), "");
+        String userId = CommonUtil.isNull(loginVO.getUserId(), "");
+        String userPwd = CommonUtil.isNull(loginVO.getUserPwd(), "");
+        String userNm = CommonUtil.isNull(loginVO.getUserNm(), "");
 
         if (userId.isEmpty() || userPwd.isEmpty() || userNm.isEmpty()) {
             jsonObject.put("retMsg", "FAIL");
             jsonObject.put("message", "필수 항목을 입력해주세요.");
             return new JSONObject(jsonObject);
         }
+
+        HashMap<String, String> params = new HashMap<>();
+        params.put("USER_ID", userId);
+        params.put("USER_PWD", userPwd);
+        params.put("USER_NM", userNm);
+        params.put("USER_EMAIL", CommonUtil.isNull(loginVO.getUserEmail(), ""));
+        params.put("USER_PHONE", CommonUtil.isNull(loginVO.getUserPhone(), ""));
+        params.put("BIRTHDAY", CommonUtil.isNull(loginVO.getBirthday(), ""));
+        params.put("CATEGORY_CODE", CommonUtil.isNull(loginVO.getCategoryCode(), ""));
 
         // ID 중복 체크
         int count = loginService.memberIdCheck(params);
@@ -222,11 +232,15 @@ public class LoginApi extends CORSFilter {
     @Operation(summary = "아이디 찾기", description = "이름, 생년월일, 이메일로 아이디를 찾습니다.")
     @PostMapping("/findId")
     public JSONObject findId(
-            @RequestBody HashMap<String, String> params) throws Exception {
+            @ModelAttribute("LoginVO") LoginVO loginVO) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
+        HashMap<String, String> params = new HashMap<>();
         params.put("SEARCHTYPE", "INFO");
+        params.put("USER_NM", CommonUtil.isNull(loginVO.getUserNm(), ""));
+        params.put("BIRTHDAY", CommonUtil.isNull(loginVO.getBirthday(), ""));
+        params.put("USER_EMAIL", CommonUtil.isNull(loginVO.getUserEmail(), ""));
 
         HashMap<String, Object> result = loginService.getSearchId(params);
 
@@ -234,9 +248,9 @@ public class LoginApi extends CORSFilter {
             jsonObject.put("retMsg", "FAIL");
             jsonObject.put("message", "일치하는 회원 정보가 없습니다.");
         } else {
-            String userId = (String) result.get("USER_ID");
+            String foundUserId = (String) result.get("USER_ID");
             // ID 마스킹 처리
-            String maskedId = userId.substring(0, 3) + "***";
+            String maskedId = foundUserId.substring(0, 3) + "***";
             jsonObject.put("retMsg", "OK");
             jsonObject.put("userId", maskedId);
             jsonObject.put("message", "아이디를 찾았습니다.");
@@ -251,13 +265,14 @@ public class LoginApi extends CORSFilter {
     @Operation(summary = "비밀번호 찾기", description = "아이디와 이름으로 비밀번호를 찾습니다.")
     @PostMapping("/findPwd")
     public JSONObject findPwd(
-            @RequestBody HashMap<String, String> params) throws Exception {
+            @ModelAttribute("LoginVO") LoginVO loginVO) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
+        HashMap<String, String> params = new HashMap<>();
         params.put("SEARCHTYPE", "INFO");
-        params.put("SEARCHID", params.get("USER_ID"));
-        params.put("NAME", params.get("USER_NM"));
+        params.put("SEARCHID", CommonUtil.isNull(loginVO.getUserId(), ""));
+        params.put("NAME", CommonUtil.isNull(loginVO.getUserNm(), ""));
 
         HashMap<String, Object> result = loginService.getSearchPW(params);
 

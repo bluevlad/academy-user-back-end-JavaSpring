@@ -4,8 +4,8 @@ import com.academy.common.CommonUtil;
 import com.academy.common.CORSFilter;
 import com.academy.common.PaginationInfo;
 import com.academy.board.service.BoardService;
+import com.academy.board.service.BoardVO;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -42,21 +42,18 @@ public class BoardApi extends CORSFilter {
     @Operation(summary = "게시판 리스트 조회", description = "게시판 목록을 페이징하여 조회합니다.")
     @GetMapping("/getBoardList")
     public JSONObject getBoardList(
-            @Parameter(description = "게시판 관리 SEQ") @RequestParam(required = false) String boardMngSeq,
-            @Parameter(description = "현재 페이지") @RequestParam(defaultValue = "1") int currentPage,
-            @Parameter(description = "페이지당 건수") @RequestParam(required = false) Integer pageRow,
-            @Parameter(description = "검색어") @RequestParam(required = false) String searchText,
-            @Parameter(description = "검색 종류") @RequestParam(required = false) String searchKind,
+            @ModelAttribute("BoardVO") BoardVO boardVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
         setParam(params, request);
 
-        params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardMngSeq, ""));
-        params.put("SEARCHTEXT", CommonUtil.isNull(searchText, ""));
-        params.put("SEARCHKIND", CommonUtil.isNull(searchKind, ""));
+        params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardVO.getBoardMngSeq(), ""));
+        params.put("SEARCHTEXT", CommonUtil.isNull(boardVO.getSearchText(), ""));
+        params.put("SEARCHKIND", CommonUtil.isNull(boardVO.getSearchKind(), ""));
 
-        int recordCountPerPage = pageRow != null ? pageRow : pageUnit;
+        int currentPage = boardVO.getCurrentPage() > 0 ? boardVO.getCurrentPage() : 1;
+        int recordCountPerPage = boardVO.getPageRow() > 0 ? boardVO.getPageRow() : pageUnit;
 
         PaginationInfo paginationInfo = new PaginationInfo();
         paginationInfo.setCurrentPageNo(currentPage);
@@ -87,15 +84,14 @@ public class BoardApi extends CORSFilter {
     @Operation(summary = "게시물 상세 조회", description = "게시물 상세 정보를 조회합니다.")
     @GetMapping("/getBoardView")
     public JSONObject getBoardView(
-            @Parameter(description = "게시물 SEQ", required = true) @RequestParam String boardSeq,
-            @Parameter(description = "게시판 관리 SEQ") @RequestParam(required = false) String boardMngSeq,
+            @ModelAttribute("BoardVO") BoardVO boardVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
         setParam(params, request);
 
-        params.put("BOARD_SEQ", boardSeq);
-        params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardMngSeq, ""));
+        params.put("BOARD_SEQ", boardVO.getBoardSeq());
+        params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardVO.getBoardMngSeq(), ""));
 
         // 조회수 증가
         boardService.updateBoardHits(params);
@@ -117,13 +113,13 @@ public class BoardApi extends CORSFilter {
     @Operation(summary = "메인 게시판 리스트 조회", description = "메인 페이지에 표시할 게시판 목록을 조회합니다.")
     @GetMapping("/getMainBoardList")
     public JSONObject getMainBoardList(
-            @Parameter(description = "게시판 관리 SEQ") @RequestParam(required = false) String boardMngSeq,
+            @ModelAttribute("BoardVO") BoardVO boardVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
         setParam(params, request);
 
-        params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardMngSeq, "NOTICE_000"));
+        params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardVO.getBoardMngSeq(), "NOTICE_000"));
 
         List<HashMap<String, Object>> resultList = boardService.getMainBoardList(params);
 
@@ -140,10 +136,15 @@ public class BoardApi extends CORSFilter {
     @Operation(summary = "게시물 등록", description = "새 게시물을 등록합니다.")
     @PostMapping("/insertBoard")
     public JSONObject insertBoard(
-            @RequestBody HashMap<String, String> params,
+            @ModelAttribute("BoardVO") BoardVO boardVO,
             HttpServletRequest request) throws Exception {
 
+        HashMap<String, String> params = new HashMap<>();
         setParam(params, request);
+
+        params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardVO.getBoardMngSeq(), ""));
+        params.put("BOARD_TITLE", CommonUtil.isNull(boardVO.getBoardTitle(), ""));
+        params.put("BOARD_CONTENT", CommonUtil.isNull(boardVO.getBoardContent(), ""));
 
         HashMap<String, Object> jsonObject = new HashMap<>();
         try {
@@ -164,10 +165,16 @@ public class BoardApi extends CORSFilter {
     @Operation(summary = "게시물 수정", description = "게시물을 수정합니다.")
     @PostMapping("/updateBoard")
     public JSONObject updateBoard(
-            @RequestBody HashMap<String, String> params,
+            @ModelAttribute("BoardVO") BoardVO boardVO,
             HttpServletRequest request) throws Exception {
 
+        HashMap<String, String> params = new HashMap<>();
         setParam(params, request);
+
+        params.put("BOARD_SEQ", CommonUtil.isNull(boardVO.getBoardSeq(), ""));
+        params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardVO.getBoardMngSeq(), ""));
+        params.put("BOARD_TITLE", CommonUtil.isNull(boardVO.getBoardTitle(), ""));
+        params.put("BOARD_CONTENT", CommonUtil.isNull(boardVO.getBoardContent(), ""));
 
         HashMap<String, Object> jsonObject = new HashMap<>();
         try {
@@ -188,10 +195,14 @@ public class BoardApi extends CORSFilter {
     @Operation(summary = "게시물 삭제", description = "게시물을 삭제합니다.")
     @PostMapping("/deleteBoard")
     public JSONObject deleteBoard(
-            @RequestBody HashMap<String, String> params,
+            @ModelAttribute("BoardVO") BoardVO boardVO,
             HttpServletRequest request) throws Exception {
 
+        HashMap<String, String> params = new HashMap<>();
         setParam(params, request);
+
+        params.put("BOARD_SEQ", CommonUtil.isNull(boardVO.getBoardSeq(), ""));
+        params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardVO.getBoardMngSeq(), ""));
 
         HashMap<String, Object> jsonObject = new HashMap<>();
         try {
