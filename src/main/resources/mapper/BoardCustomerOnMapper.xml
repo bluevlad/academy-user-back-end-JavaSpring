@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.academy.mapper.BoardCustomerOnMapper">
+
+    <!-- 쿠폰 유효성 검사 -->
+    <select id="isUseCouponCheck" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            idx,
+            coupon_type,
+            coupon_num_new
+        FROM TB_COUPON_MST
+        WHERE coupon_num_new = #{COUPONCODE}
+          AND use_yn = 'Y'
+    </select>
+
+    <!-- 쿠폰 사용 횟수 조회 -->
+    <select id="getCouponCount" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            COUPON_SEQ,
+            USER_ID,
+            COUPON_CD
+        FROM TB_MY_COUPON
+        WHERE USER_ID = #{USER_ID}
+          AND COUPON_CD = #{CCode}
+    </select>
+
+    <!-- 쿠폰 만료일 조회 -->
+    <select id="getCouponEndDate" parameterType="hashmap" resultType="string">
+        SELECT
+            DATE_FORMAT(ED_DT, '%Y-%m-%d') AS ED_DT
+        FROM TB_COUPON_INFO
+        WHERE COUPON_CD = #{CCode}
+    </select>
+
+    <!-- 쿠폰 정보 조회 -->
+    <select id="getCouponMap" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            COUPON_CD,
+            COUPON_NM,
+            COUPON_AMT,
+            PUB_COUPON_GUBUN,
+            ST_DT,
+            ED_DT
+        FROM TB_COUPON_INFO
+        WHERE COUPON_CD = #{CCode}
+    </select>
+
+    <!-- 내 쿠폰 등록 -->
+    <insert id="insertMyCoupon" parameterType="hashmap">
+        INSERT INTO TB_MY_COUPON (
+            USER_ID,
+            COUPON_CD,
+            COUPON_NM,
+            COUPON_AMT,
+            USE_YN,
+            REG_DT
+        ) VALUES (
+            #{USER_ID},
+            #{COUPON_CD},
+            #{COUPON_NM},
+            #{COUPON_AMT},
+            'N',
+            NOW()
+        )
+    </insert>
+
+    <!-- 내 쿠폰 등록 (파라미터 String) -->
+    <insert id="insertMyCoupon2" parameterType="hashmap">
+        INSERT INTO TB_MY_COUPON (
+            USER_ID,
+            COUPON_CD,
+            COUPON_NM,
+            COUPON_AMT,
+            USE_YN,
+            REG_DT
+        )
+        SELECT
+            #{USER_ID},
+            COUPON_CD,
+            COUPON_NM,
+            COUPON_AMT,
+            'N',
+            NOW()
+        FROM TB_COUPON_INFO
+        WHERE COUPON_CD = #{CCode}
+    </insert>
+
+    <!-- MSSQL 쿠폰 업데이트 -->
+    <update id="updateMssqlCoupon" parameterType="hashmap">
+        UPDATE TB_COUPON_MST
+        SET
+            use_yn = 'N',
+            use_dt = NOW(),
+            use_user_id = #{USER_ID}
+        WHERE idx = #{IDX}
+    </update>
+
+    <!-- 제휴 쿠폰 사용 여부 검사 -->
+    <select id="coopIsUseCouponCheck" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            COOP_CD,
+            LECCODE,
+            ORDERNO,
+            USER_ID,
+            REG_DT,
+            ED_DT
+        FROM TB_COOP_COUPON
+        WHERE COUPON_CODE = #{COUPONCODE}
+    </select>
+
+    <!-- 제휴 주문 등록 -->
+    <insert id="coopInsertOrder" parameterType="hashmap">
+        INSERT INTO TB_ORDER (
+            USER_ID,
+            LECCODE,
+            ORDER_TYPE,
+            ORDER_STATUS,
+            REG_DT
+        ) VALUES (
+            #{USER_ID},
+            #{LECCODE},
+            'COOP',
+            'COMPLETE',
+            NOW()
+        )
+    </insert>
+
+    <!-- 제휴 쿠폰 마스터 업데이트 -->
+    <update id="coopCouponMstUpdate" parameterType="hashmap">
+        UPDATE TB_COOP_COUPON
+        SET
+            USER_ID = #{USER_ID},
+            ORDERNO = LAST_INSERT_ID(),
+            REG_DT = NOW()
+        WHERE COOP_CD = #{COOP_CD}
+          AND COUPON_CODE = #{COUPONCODE}
+    </update>
+
+    <!-- 이벤트 댓글 목록 조회 -->
+    <select id="getEventReplyList" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            REPLY_SEQ,
+            EVENT_NO,
+            CONTENT,
+            REG_ID,
+            REG_NM,
+            DATE_FORMAT(REG_DT, '%Y-%m-%d %H:%i:%s') AS REG_DT
+        FROM TB_EVENT_REPLY
+        WHERE EVENT_NO = #{searchEventNo}
+          AND DEL_YN = 'N'
+        ORDER BY REG_DT DESC
+        LIMIT #{recordCountPerPage} OFFSET #{firstIndex}
+    </select>
+
+    <!-- 이벤트 댓글 수 조회 -->
+    <select id="getEventReplyCount" parameterType="hashmap" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_EVENT_REPLY
+        WHERE EVENT_NO = #{searchEventNo}
+          AND DEL_YN = 'N'
+    </select>
+
+</mapper>

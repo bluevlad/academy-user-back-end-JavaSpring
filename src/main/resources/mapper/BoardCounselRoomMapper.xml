@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.academy.mapper.BoardCounselRoomMapper">
+
+    <!-- 게시판 정보 조회 -->
+    <select id="getBoardInfo" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            BOARD_MNG_SEQ,
+            BOARD_NM,
+            BOARD_DESC,
+            USE_YN
+        FROM TB_BOARD_MNG
+        WHERE BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+    </select>
+
+    <!-- 상담실 게시판 목록 조회 -->
+    <select id="boardList" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            A.BOARD_SEQ,
+            A.BOARD_MNG_SEQ,
+            A.SUBJECT,
+            A.HITS,
+            A.REG_ID,
+            A.REG_NM,
+            DATE_FORMAT(A.REG_DT, '%Y-%m-%d') AS REG_DT,
+            A.OPEN_YN,
+            IFNULL(A.REPLY_YN, 'N') AS REPLY_YN,
+            A.CATEGORY_CODE
+        FROM TB_BOARD A
+        WHERE A.BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+          AND A.DEL_YN = 'N'
+          AND A.PARENT_BOARD_SEQ IS NULL
+        <if test="SEARCHTEXT != null and SEARCHTEXT != ''">
+            <choose>
+                <when test="SEARCHKIND == 'subject'">
+                    AND A.SUBJECT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                </when>
+                <when test="SEARCHKIND == 'content'">
+                    AND A.CONTENT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                </when>
+                <when test="SEARCHKIND == 'regNm'">
+                    AND A.REG_NM LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                </when>
+                <otherwise>
+                    AND (A.SUBJECT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                         OR A.CONTENT LIKE CONCAT('%', #{SEARCHTEXT}, '%'))
+                </otherwise>
+            </choose>
+        </if>
+        ORDER BY A.REG_DT DESC, A.BOARD_SEQ DESC
+        LIMIT #{recordCountPerPage} OFFSET #{firstIndex}
+    </select>
+
+    <!-- 상담실 게시판 목록 수 조회 -->
+    <select id="boardListCount" parameterType="hashmap" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_BOARD A
+        WHERE A.BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+          AND A.DEL_YN = 'N'
+          AND A.PARENT_BOARD_SEQ IS NULL
+        <if test="SEARCHTEXT != null and SEARCHTEXT != ''">
+            <choose>
+                <when test="SEARCHKIND == 'subject'">
+                    AND A.SUBJECT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                </when>
+                <when test="SEARCHKIND == 'content'">
+                    AND A.CONTENT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                </when>
+                <when test="SEARCHKIND == 'regNm'">
+                    AND A.REG_NM LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                </when>
+                <otherwise>
+                    AND (A.SUBJECT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                         OR A.CONTENT LIKE CONCAT('%', #{SEARCHTEXT}, '%'))
+                </otherwise>
+            </choose>
+        </if>
+    </select>
+
+    <!-- 게시물 상세 조회 -->
+    <select id="boardView" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            A.BOARD_SEQ,
+            A.BOARD_MNG_SEQ,
+            A.SUBJECT,
+            A.CONTENT,
+            A.HITS,
+            A.REG_ID,
+            A.REG_NM,
+            DATE_FORMAT(A.REG_DT, '%Y-%m-%d %H:%i:%s') AS REG_DT,
+            A.UPD_ID,
+            DATE_FORMAT(A.UPD_DT, '%Y-%m-%d %H:%i:%s') AS UPD_DT,
+            A.OPEN_YN,
+            IFNULL(A.REPLY_YN, 'N') AS REPLY_YN,
+            A.CATEGORY_CODE
+        FROM TB_BOARD A
+        WHERE A.BOARD_SEQ = #{BOARD_SEQ}
+          AND A.DEL_YN = 'N'
+    </select>
+
+    <!-- 답변 상세 조회 -->
+    <select id="boardReplyView" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            A.BOARD_SEQ,
+            A.PARENT_BOARD_SEQ,
+            A.SUBJECT,
+            A.CONTENT,
+            A.REG_ID,
+            A.REG_NM,
+            DATE_FORMAT(A.REG_DT, '%Y-%m-%d %H:%i:%s') AS REG_DT,
+            A.UPD_ID,
+            DATE_FORMAT(A.UPD_DT, '%Y-%m-%d %H:%i:%s') AS UPD_DT
+        FROM TB_BOARD A
+        WHERE A.PARENT_BOARD_SEQ = #{BOARD_SEQ}
+          AND A.DEL_YN = 'N'
+        ORDER BY A.REG_DT DESC
+        LIMIT 1
+    </select>
+
+    <!-- 게시물 첨부파일 조회 -->
+    <select id="boardAttachFile" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            FILE_SEQ,
+            BOARD_SEQ,
+            FILE_PATH,
+            FILE_NAME,
+            REAL_FILE_NAME,
+            FILE_SIZE,
+            DATE_FORMAT(REG_DT, '%Y-%m-%d') AS REG_DT
+        FROM TB_BOARD_FILE
+        WHERE BOARD_SEQ = #{BOARD_SEQ}
+          AND FILE_TYPE = 'F'
+          AND DEL_YN = 'N'
+        ORDER BY FILE_SEQ
+    </select>
+
+    <!-- 게시물 이미지 첨부파일 조회 -->
+    <select id="boardAttachFileImg" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            FILE_SEQ,
+            BOARD_SEQ,
+            FILE_PATH,
+            FILE_NAME,
+            REAL_FILE_NAME,
+            FILE_SIZE,
+            DATE_FORMAT(REG_DT, '%Y-%m-%d') AS REG_DT
+        FROM TB_BOARD_FILE
+        WHERE BOARD_SEQ = #{BOARD_SEQ}
+          AND FILE_TYPE = 'I'
+          AND DEL_YN = 'N'
+        ORDER BY FILE_SEQ
+    </select>
+
+    <!-- 답변 첨부파일 조회 -->
+    <select id="boardReplyAttachFile" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            F.FILE_SEQ,
+            F.BOARD_SEQ,
+            F.FILE_PATH,
+            F.FILE_NAME,
+            F.REAL_FILE_NAME,
+            F.FILE_SIZE,
+            DATE_FORMAT(F.REG_DT, '%Y-%m-%d') AS REG_DT
+        FROM TB_BOARD_FILE F
+        INNER JOIN TB_BOARD B ON F.BOARD_SEQ = B.BOARD_SEQ
+        WHERE B.PARENT_BOARD_SEQ = #{BOARD_SEQ}
+          AND F.FILE_TYPE = 'F'
+          AND F.DEL_YN = 'N'
+        ORDER BY F.FILE_SEQ
+    </select>
+
+    <!-- 답변 이미지 첨부파일 조회 -->
+    <select id="boardReplyAttachFileImg" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            F.FILE_SEQ,
+            F.BOARD_SEQ,
+            F.FILE_PATH,
+            F.FILE_NAME,
+            F.REAL_FILE_NAME,
+            F.FILE_SIZE,
+            DATE_FORMAT(F.REG_DT, '%Y-%m-%d') AS REG_DT
+        FROM TB_BOARD_FILE F
+        INNER JOIN TB_BOARD B ON F.BOARD_SEQ = B.BOARD_SEQ
+        WHERE B.PARENT_BOARD_SEQ = #{BOARD_SEQ}
+          AND F.FILE_TYPE = 'I'
+          AND F.DEL_YN = 'N'
+        ORDER BY F.FILE_SEQ
+    </select>
+
+    <!-- 조회수 증가 -->
+    <update id="updateBoardHits" parameterType="hashmap">
+        UPDATE TB_BOARD
+        SET HITS = IFNULL(HITS, 0) + 1
+        WHERE BOARD_SEQ = #{BOARD_SEQ}
+    </update>
+
+    <!-- 게시물 등록 -->
+    <insert id="insertBoard" parameterType="hashmap">
+        <selectKey keyProperty="BOARD_SEQ" resultType="string" order="BEFORE">
+            SELECT IFNULL(MAX(CAST(BOARD_SEQ AS UNSIGNED)), 0) + 1 FROM TB_BOARD
+        </selectKey>
+        INSERT INTO TB_BOARD (
+            BOARD_SEQ,
+            BOARD_MNG_SEQ,
+            SUBJECT,
+            CONTENT,
+            HITS,
+            REG_ID,
+            REG_NM,
+            REG_DT,
+            OPEN_YN,
+            DEL_YN,
+            NOTICE_TOP_YN,
+            CATEGORY_CODE,
+            REPLY_YN
+        ) VALUES (
+            #{BOARD_SEQ},
+            #{BOARD_MNG_SEQ},
+            #{SUBJECT},
+            #{CONTENT},
+            0,
+            #{REG_ID},
+            #{USER_NM},
+            NOW(),
+            #{OPEN_YN},
+            'N',
+            #{NOTICE_TOP_YN},
+            #{CATEGORY_CODE},
+            'N'
+        )
+    </insert>
+
+    <!-- 게시물 수정 -->
+    <update id="updateBoard" parameterType="hashmap">
+        UPDATE TB_BOARD
+        SET
+            SUBJECT = #{SUBJECT},
+            CONTENT = #{CONTENT},
+            OPEN_YN = #{OPEN_YN},
+            CATEGORY_CODE = #{CATEGORY_CODE},
+            UPD_ID = #{UPD_ID},
+            UPD_DT = NOW()
+        WHERE BOARD_SEQ = #{BOARD_SEQ}
+    </update>
+
+    <!-- 게시물 삭제 -->
+    <update id="deleteBoard" parameterType="hashmap">
+        UPDATE TB_BOARD
+        SET
+            DEL_YN = 'Y',
+            UPD_ID = #{UPD_ID},
+            UPD_DT = NOW()
+        WHERE BOARD_SEQ = #{BOARD_SEQ}
+    </update>
+
+    <!-- 답변 등록 -->
+    <insert id="insertReply" parameterType="hashmap">
+        <selectKey keyProperty="REPLY_SEQ" resultType="string" order="BEFORE">
+            SELECT IFNULL(MAX(CAST(BOARD_SEQ AS UNSIGNED)), 0) + 1 FROM TB_BOARD
+        </selectKey>
+        INSERT INTO TB_BOARD (
+            BOARD_SEQ,
+            PARENT_BOARD_SEQ,
+            BOARD_MNG_SEQ,
+            SUBJECT,
+            CONTENT,
+            HITS,
+            REG_ID,
+            REG_NM,
+            REG_DT,
+            OPEN_YN,
+            DEL_YN
+        ) VALUES (
+            #{REPLY_SEQ},
+            #{BOARD_SEQ},
+            #{BOARD_MNG_SEQ},
+            #{SUBJECT},
+            #{CONTENT},
+            0,
+            #{REG_ID},
+            #{USER_NM},
+            NOW(),
+            'Y',
+            'N'
+        )
+    </insert>
+
+    <!-- 답변 수정 -->
+    <update id="updateReply" parameterType="hashmap">
+        UPDATE TB_BOARD
+        SET
+            SUBJECT = #{SUBJECT},
+            CONTENT = #{CONTENT},
+            UPD_ID = #{UPD_ID},
+            UPD_DT = NOW()
+        WHERE BOARD_SEQ = #{BOARD_SEQ}
+    </update>
+
+    <!-- 답변 상태 업데이트 -->
+    <update id="updateReplyStatus" parameterType="hashmap">
+        UPDATE TB_BOARD
+        SET
+            REPLY_YN = 'Y',
+            UPD_DT = NOW()
+        WHERE BOARD_SEQ = #{BOARD_SEQ}
+    </update>
+
+</mapper>
