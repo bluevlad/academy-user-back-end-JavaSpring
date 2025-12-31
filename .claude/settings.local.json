@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn clean compile:*)",
+      "Bash(./mvnw.cmd clean compile:*)",
+      "Bash(./mvnw clean compile:*)",
+      "Bash(where mvn:*)",
+      "Bash(powershell.exe -Command \"cd ''C:\\GIT\\academy-user-back-end-JavaSpring''; C:\\apache-maven\\bin\\mvn.cmd clean compile\")",
+      "Bash(powershell.exe -Command \"Test-Path ''C:\\apache-maven\\bin\\mvn.cmd''\")",
+      "Bash(powershell.exe -Command \"Get-ChildItem ''C:\\apache-maven'' -Recurse -Name | Select-Object -First 20\")",
+      "Bash(powershell.exe -Command \"Get-ChildItem ''C:\\'' -Directory | Where-Object { $_.Name -like ''*maven*'' -or $_.Name -like ''*mvn*'' }\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

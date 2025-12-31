@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.academy.mapper.BoardLibraryMapper">
+
+    <!-- 게시판 정보 조회 -->
+    <select id="getBoardInfo" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            BOARD_MNG_SEQ,
+            BOARD_NM,
+            BOARD_DESC,
+            USE_YN
+        FROM TB_BOARD_MNG
+        WHERE BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+    </select>
+
+    <!-- 자료실 게시판 목록 조회 -->
+    <select id="boardList" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            A.BOARD_SEQ,
+            A.BOARD_MNG_SEQ,
+            A.SUBJECT,
+            A.HITS,
+            A.REG_ID,
+            A.REG_NM,
+            DATE_FORMAT(A.REG_DT, '%Y-%m-%d') AS REG_DT,
+            (SELECT COUNT(*) FROM TB_BOARD_FILE WHERE BOARD_SEQ = A.BOARD_SEQ AND FILE_TYPE = 'F' AND DEL_YN = 'N') AS FILE_CNT
+        FROM TB_BOARD A
+        WHERE A.BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+          AND A.DEL_YN = 'N'
+        <if test="SEARCHTEXT != null and SEARCHTEXT != ''">
+            <choose>
+                <when test="SEARCHKIND == 'subject'">
+                    AND A.SUBJECT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                </when>
+                <when test="SEARCHKIND == 'content'">
+                    AND A.CONTENT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                </when>
+                <when test="SEARCHKIND == 'regNm'">
+                    AND A.REG_NM LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                </when>
+                <otherwise>
+                    AND (A.SUBJECT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                         OR A.CONTENT LIKE CONCAT('%', #{SEARCHTEXT}, '%'))
+                </otherwise>
+            </choose>
+        </if>
+        ORDER BY A.NOTICE_TOP_YN DESC, A.REG_DT DESC, A.BOARD_SEQ DESC
+        LIMIT #{recordCountPerPage} OFFSET #{firstIndex}
+    </select>
+
+    <!-- 자료실 게시판 목록 수 조회 -->
+    <select id="boardListCount" parameterType="hashmap" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_BOARD A
+        WHERE A.BOARD_MNG_SEQ = #{BOARD_MNG_SEQ}
+          AND A.DEL_YN = 'N'
+        <if test="SEARCHTEXT != null and SEARCHTEXT != ''">
+            <choose>
+                <when test="SEARCHKIND == 'subject'">
+                    AND A.SUBJECT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                </when>
+                <when test="SEARCHKIND == 'content'">
+                    AND A.CONTENT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                </when>
+                <when test="SEARCHKIND == 'regNm'">
+                    AND A.REG_NM LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                </when>
+                <otherwise>
+                    AND (A.SUBJECT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                         OR A.CONTENT LIKE CONCAT('%', #{SEARCHTEXT}, '%'))
+                </otherwise>
+            </choose>
+        </if>
+    </select>
+
+    <!-- 게시물 상세 조회 -->
+    <select id="boardView" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            A.BOARD_SEQ,
+            A.BOARD_MNG_SEQ,
+            A.SUBJECT,
+            A.CONTENT,
+            A.HITS,
+            A.REG_ID,
+            A.REG_NM,
+            DATE_FORMAT(A.REG_DT, '%Y-%m-%d %H:%i:%s') AS REG_DT,
+            A.UPD_ID,
+            DATE_FORMAT(A.UPD_DT, '%Y-%m-%d %H:%i:%s') AS UPD_DT
+        FROM TB_BOARD A
+        WHERE A.BOARD_SEQ = #{BOARD_SEQ}
+          AND A.DEL_YN = 'N'
+    </select>
+
+    <!-- 게시물 첨부파일 조회 -->
+    <select id="boardAttachFile" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            FILE_SEQ,
+            BOARD_SEQ,
+            FILE_PATH,
+            FILE_NAME,
+            REAL_FILE_NAME,
+            FILE_SIZE,
+            DATE_FORMAT(REG_DT, '%Y-%m-%d') AS REG_DT
+        FROM TB_BOARD_FILE
+        WHERE BOARD_SEQ = #{BOARD_SEQ}
+          AND FILE_TYPE = 'F'
+          AND DEL_YN = 'N'
+        ORDER BY FILE_SEQ
+    </select>
+
+    <!-- 게시물 이미지 첨부파일 조회 -->
+    <select id="boardAttachFileImg" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            FILE_SEQ,
+            BOARD_SEQ,
+            FILE_PATH,
+            FILE_NAME,
+            REAL_FILE_NAME,
+            FILE_SIZE,
+            DATE_FORMAT(REG_DT, '%Y-%m-%d') AS REG_DT
+        FROM TB_BOARD_FILE
+        WHERE BOARD_SEQ = #{BOARD_SEQ}
+          AND FILE_TYPE = 'I'
+          AND DEL_YN = 'N'
+        ORDER BY FILE_SEQ
+    </select>
+
+    <!-- 조회수 증가 -->
+    <update id="updateBoardHits" parameterType="hashmap">
+        UPDATE TB_BOARD
+        SET HITS = IFNULL(HITS, 0) + 1
+        WHERE BOARD_SEQ = #{BOARD_SEQ}
+    </update>
+
+</mapper>
