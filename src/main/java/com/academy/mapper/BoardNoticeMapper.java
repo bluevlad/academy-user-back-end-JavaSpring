@@ -7,7 +7,7 @@ import java.util.List;
 
 /**
  * BoardNoticeMapper.java
- * 공지사항 관련 Mapper 인터페이스
+ * 공지사항 게시판 Mapper Interface
  */
 @Mapper
 public interface BoardNoticeMapper {
@@ -18,29 +18,29 @@ public interface BoardNoticeMapper {
     HashMap<String, Object> getBoardInfo(HashMap<String, String> params);
 
     /**
-     * 게시판 정보 목록 조회
-     */
-    List<HashMap<String, Object>> getBoardInfoList(HashMap<String, String> params);
-
-    /**
-     * 메인 게시판 목록 조회
-     */
-    List<HashMap<String, Object>> getMainBoardList(HashMap<String, String> params);
-
-    /**
-     * 게시글 목록 조회
+     * 공지사항 게시판 목록 조회
      */
     List<HashMap<String, Object>> boardList(HashMap<String, String> params);
 
     /**
-     * 게시글 건수 조회
+     * 공지사항 게시판 목록 수 조회
      */
     int boardListCount(HashMap<String, String> params);
 
     /**
-     * 게시글 상세 조회
+     * 게시물 상세 조회
      */
     HashMap<String, Object> boardView(HashMap<String, String> params);
+
+    /**
+     * 게시물 첨부파일 조회
+     */
+    List<HashMap<String, Object>> boardAttachFile(HashMap<String, String> params);
+
+    /**
+     * 게시물 이미지 첨부파일 조회
+     */
+    List<HashMap<String, Object>> boardAttachFileImg(HashMap<String, String> params);
 
     /**
      * 조회수 증가
@@ -48,8 +48,7 @@ public interface BoardNoticeMapper {
     void updateBoardHits(HashMap<String, String> params);
 
     /**
-     * FAQ 목록 조회
+     * 메인 공지사항 목록 조회
      */
-    List<HashMap<String, Object>> boardFAQList(HashMap<String, String> params);
-
+    List<HashMap<String, Object>> getMainBoardList(HashMap<String, String> params);
 }
