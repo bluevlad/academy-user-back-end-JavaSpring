@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.academy.mapper.SurveyMapper">
+
+    <!-- 설문조사 목록 조회 -->
+    <select id="surveyList" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            SURVEYID,
+            SURVEYTITLE,
+            SURVEYDESC,
+            DATE_FORMAT(SURVEY_SDAT, '%Y-%m-%d') AS SURVEY_SDAT,
+            DATE_FORMAT(SURVEY_EDAT, '%Y-%m-%d') AS SURVEY_EDAT,
+            SETID,
+            ISUSE,
+            SURVEY_TARGET,
+            CASE
+                WHEN SURVEY_SDAT > NOW() THEN '대기중'
+                WHEN SURVEY_SDAT <![CDATA[<=]]> NOW() AND SURVEY_EDAT >= NOW() THEN '진행중'
+                WHEN SURVEY_EDAT <![CDATA[<]]> NOW() THEN '완료'
+            END AS STATUS
+        FROM WWW_SURVEY_MST
+        WHERE ISUSE = 'Y'
+        ORDER BY SURVEYID DESC
+    </select>
+
+    <!-- 설문조사 상세 조회 -->
+    <select id="surveyView" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            SURVEYID,
+            SURVEYTITLE,
+            SURVEYDESC,
+            DATE_FORMAT(SURVEY_SDAT, '%Y-%m-%d') AS SURVEY_SDAT,
+            DATE_FORMAT(SURVEY_EDAT, '%Y-%m-%d') AS SURVEY_EDAT,
+            SETID,
+            ISUSE,
+            SURVEY_TARGET,
+            CASE
+                WHEN SURVEY_SDAT > NOW() THEN '대기중'
+                WHEN SURVEY_SDAT <![CDATA[<=]]> NOW() AND SURVEY_EDAT >= NOW() THEN '진행중'
+                WHEN SURVEY_EDAT <![CDATA[<]]> NOW() THEN '완료'
+            END AS STATUS
+        FROM WWW_SURVEY_MST
+        WHERE SURVEYID = #{SURVEYID}
+    </select>
+
+    <!-- 설문조사 질문 목록 조회 -->
+    <select id="getSurveyById" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            A.QUEID,
+            A.QUETITLE,
+            A.QUECOUNT,
+            A.QUETYPE,
+            A.QUEVIW1,
+            A.QUEVIW2,
+            A.QUEVIW3,
+            A.QUEVIW4,
+            A.QUEVIW5,
+            A.QUEVIW6,
+            A.QUEVIW7,
+            A.QUEVIW8,
+            A.QUEVIW9,
+            A.QUEVIW10,
+            A.HINT1,
+            A.HINT2,
+            A.HINT3,
+            A.HINT4,
+            A.HINT5,
+            A.HINT6,
+            A.HINT7,
+            A.HINT8,
+            A.HINT9,
+            A.HINT10,
+            C.QSEQ
+        FROM WWW_SURVEY_BNK A
+        INNER JOIN WWW_SURVEY_MST B ON B.SETID = (
+            SELECT SETID FROM WWW_SURVEY_SET_ITEM WHERE QUEID = A.QUEID LIMIT 1
+        )
+        INNER JOIN WWW_SURVEY_SET_ITEM C ON A.QUEID = C.QUEID AND B.SETID = C.SETID
+        WHERE B.SURVEYID = #{SURVEYID}
+          AND A.ISUSE = 'Y'
+        ORDER BY C.QSEQ ASC
+    </select>
+
+    <!-- 설문조사 결과 통계 조회 -->
+    <select id="surveyRstList" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            AA.QUEID,
+            AA.QUETITLE,
+            AA.QUECOUNT,
+            AA.QUETYPE,
+            AA.QUEVIW1,
+            AA.QUEVIW2,
+            AA.QUEVIW3,
+            AA.QUEVIW4,
+            AA.QUEVIW5,
+            AA.QUEVIW6,
+            AA.QUEVIW7,
+            AA.QUEVIW8,
+            AA.QUEVIW9,
+            AA.QUEVIW10,
+            AA.QSEQ,
+            IFNULL(BB.A1, 0) AS A1,
+            IFNULL(BB.A2, 0) AS A2,
+            IFNULL(BB.A3, 0) AS A3,
+            IFNULL(BB.A4, 0) AS A4,
+            IFNULL(BB.A5, 0) AS A5,
+            IFNULL(BB.A6, 0) AS A6,
+            IFNULL(BB.A7, 0) AS A7,
+            IFNULL(BB.A8, 0) AS A8,
+            IFNULL(BB.A9, 0) AS A9,
+            IFNULL(BB.A10, 0) AS A10,
+            IFNULL(BB.ASUM, 0) AS ASUM
+        FROM (
+            SELECT
+                I.QSEQ,
+                B.QUEID,
+                B.QUETITLE,
+                B.QUECOUNT,
+                B.QUETYPE,
+                B.QUEVIW1, B.QUEVIW2, B.QUEVIW3, B.QUEVIW4, B.QUEVIW5,
+                B.QUEVIW6, B.QUEVIW7, B.QUEVIW8, B.QUEVIW9, B.QUEVIW10
+            FROM WWW_SURVEY_SET_ITEM I
+            INNER JOIN WWW_SURVEY_BNK B ON B.QUEID = I.QUEID AND B.ISUSE = 'Y'
+            INNER JOIN WWW_SURVEY_MST C ON I.SETID = C.SETID
+            WHERE C.SURVEYID = #{SURVEYID}
+        ) AA
+        LEFT JOIN (
+            SELECT
+                QUEID AS QUE,
+                SUM(CASE WHEN LOCATE('1', IFNULL(USER_ANSW, '')) > 0 THEN 1 ELSE 0 END) AS A1,
+                SUM(CASE WHEN LOCATE('2', IFNULL(USER_ANSW, '')) > 0 THEN 1 ELSE 0 END) AS A2,
+                SUM(CASE WHEN LOCATE('3', IFNULL(USER_ANSW, '')) > 0 THEN 1 ELSE 0 END) AS A3,
+                SUM(CASE WHEN LOCATE('4', IFNULL(USER_ANSW, '')) > 0 THEN 1 ELSE 0 END) AS A4,
+                SUM(CASE WHEN LOCATE('5', IFNULL(USER_ANSW, '')) > 0 THEN 1 ELSE 0 END) AS A5,
+                SUM(CASE WHEN LOCATE('6', IFNULL(USER_ANSW, '')) > 0 THEN 1 ELSE 0 END) AS A6,
+                SUM(CASE WHEN LOCATE('7', IFNULL(USER_ANSW, '')) > 0 THEN 1 ELSE 0 END) AS A7,
+                SUM(CASE WHEN LOCATE('8', IFNULL(USER_ANSW, '')) > 0 THEN 1 ELSE 0 END) AS A8,
+                SUM(CASE WHEN LOCATE('9', IFNULL(USER_ANSW, '')) > 0 THEN 1 ELSE 0 END) AS A9,
+                SUM(CASE WHEN LOCATE('10', IFNULL(USER_ANSW, '')) > 0 THEN 1 ELSE 0 END) AS A10,
+                COUNT(*) AS ASUM
+            FROM WWW_SURVEY_RST_ITEM
+            WHERE SURVEYID = #{SURVEYID}
+            GROUP BY QUEID
+        ) BB ON AA.QUEID = BB.QUE
+        ORDER BY AA.QSEQ ASC
+    </select>
+
+    <!-- 설문조사 참여 여부 확인 -->
+    <select id="checkSurveyCnt" parameterType="hashmap" resultType="int">
+        SELECT COUNT(*)
+        FROM WWW_SURVEY_RST
+        WHERE SURVEYID = #{SURVEYID}
+          AND USER_ID = #{USER_ID}
+    </select>
+
+    <!-- 설문조사 결과 등록 -->
+    <insert id="insertSurveyRst" parameterType="hashmap">
+        INSERT INTO WWW_SURVEY_RST (
+            SURVEYID,
+            USER_ID,
+            POSITION,
+            REG_DT
+        ) VALUES (
+            #{SURVEYID},
+            #{USER_ID},
+            #{POSITION},
+            NOW()
+        )
+    </insert>
+
+    <!-- 설문조사 결과 항목 등록 -->
+    <insert id="insertSurveyRstItem" parameterType="hashmap">
+        INSERT INTO WWW_SURVEY_RST_ITEM (
+            SURVEYID,
+            USER_ID,
+            QUEID,
+            QSEQ,
+            USER_ANSW
+        ) VALUES (
+            #{SURVEYID},
+            #{USER_ID},
+            #{QUEID},
+            #{QSEQ},
+            #{USER_ANSW}
+        )
+    </insert>
+
+</mapper>
