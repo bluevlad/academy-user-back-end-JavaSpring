@@ -4,7 +4,8 @@
       "Bash(powershell.exe -Command \"Get-Command mvn -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source\")",
       "Bash(powershell.exe -Command \"if (Test-Path ''./mvnw.cmd'') { Write-Output ''mvnw.cmd exists'' } else { Write-Output ''mvnw.cmd not found'' }\")",
       "Bash(powershell.exe -Command \"Get-ChildItem -Path ''C:\\jee-2025-09\\workspace\\willbesgosiWeb\\src\\sqlmap\\mappers'' -Recurse -Name | Select-Object -First 30\")",
-      "Bash(powershell.exe -Command \"Get-ChildItem -Path ''C:\\jee-2025-09\\workspace\\willbesgosiWeb\\src\\sqlmap\\mappers\\oracle'' -Recurse -Name | Select-Object -First 50\")"
+      "Bash(powershell.exe -Command \"Get-ChildItem -Path ''C:\\jee-2025-09\\workspace\\willbesgosiWeb\\src\\sqlmap\\mappers\\oracle'' -Recurse -Name | Select-Object -First 50\")",
+      "Bash(powershell.exe -Command \"Get-ChildItem -Path ''C:\\jee-2025-09\\workspace\\willbesgosiWeb\\src\\com\\willbes\\web'' -Filter ''*ndex*'' -Recurse -Name | Select-Object -First 20\")"
     ],
     "deny": [],
     "ask": []
