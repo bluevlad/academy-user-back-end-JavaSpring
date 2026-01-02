@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.academy.mapper.CoopMapper">
+
+    <!-- 제휴사 공지 목록 조회 (추천/상단고정) -->
+    <select id="getCoopNoticeList" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            COOP_BOARD_SEQ,
+            OPEN_YN,
+            CREATENAME,
+            SUBJECT,
+            CONTENT,
+            FILE_PATH,
+            FILE_NAME,
+            REAL_FILE_NAME,
+            THUMBNAIL_FILE_PATH,
+            THUMBNAIL_FILE_NAME,
+            THUMBNAIL_FILE_REAL_NAME,
+            NOTICE_TOP_YN,
+            RECOMMEND,
+            COOP_TYPE,
+            COOP_AREA,
+            COOP_CATE,
+            (SELECT CODE_NM FROM TB_BA_CONFIG_CD WHERE SYS_CD = 'AREA' AND CODE_CD = A.COOP_AREA LIMIT 1) AS COOP_AREA_NM,
+            DATE_FORMAT(REG_DT, '%Y-%m-%d') AS REG_DT,
+            REG_ID,
+            DATE_FORMAT(UPD_DT, '%Y-%m-%d') AS UPD_DT,
+            UPD_ID,
+            HITS
+        FROM TB_BOARD_MEMBERSHIP A
+        WHERE OPEN_YN = 'Y'
+        <if test="NOTICE_TOP_YN != null and NOTICE_TOP_YN == 'Y'">
+            AND NOTICE_TOP_YN = 'Y'
+        </if>
+        <if test="RECOMMEND != null and RECOMMEND == 'Y'">
+            AND RECOMMEND = 'Y'
+        </if>
+        ORDER BY COOP_RANK ASC, REG_DT DESC
+        LIMIT #{cnt}
+    </select>
+
+    <!-- 제휴사 게시판 목록 조회 -->
+    <select id="getCoopboardList" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            COOP_BOARD_SEQ,
+            OPEN_YN,
+            CREATENAME,
+            SUBJECT,
+            CONTENT,
+            FILE_PATH,
+            FILE_NAME,
+            REAL_FILE_NAME,
+            THUMBNAIL_FILE_PATH,
+            THUMBNAIL_FILE_NAME,
+            THUMBNAIL_FILE_REAL_NAME,
+            NOTICE_TOP_YN,
+            RECOMMEND,
+            COOP_TYPE,
+            COOP_AREA,
+            COOP_CATE,
+            (SELECT CODE_NM FROM TB_BA_CONFIG_CD WHERE SYS_CD = 'AREA' AND CODE_CD = A.COOP_AREA LIMIT 1) AS COOP_AREA_NM,
+            DATE_FORMAT(REG_DT, '%Y-%m-%d') AS REG_DT,
+            REG_ID,
+            DATE_FORMAT(UPD_DT, '%Y-%m-%d') AS UPD_DT,
+            UPD_ID,
+            HITS
+        FROM TB_BOARD_MEMBERSHIP A
+        WHERE OPEN_YN = 'Y'
+        <if test="COOP_AREA != null and COOP_AREA != ''">
+            AND COOP_AREA = #{COOP_AREA}
+        </if>
+        <if test="COOP_CATE != null and COOP_CATE != ''">
+            AND COOP_CATE = #{COOP_CATE}
+        </if>
+        <if test="searchText != null and searchText != ''">
+            <if test="searchKind != null and searchKind != ''">
+                <choose>
+                    <when test="searchKind == 'cname'">
+                        AND CREATENAME LIKE CONCAT('%', #{searchText}, '%')
+                    </when>
+                    <when test="searchKind == 'sbj'">
+                        AND SUBJECT LIKE CONCAT('%', #{searchText}, '%')
+                    </when>
+                    <otherwise>
+                        AND (SUBJECT LIKE CONCAT('%', #{searchText}, '%')
+                             OR CREATENAME LIKE CONCAT('%', #{searchText}, '%'))
+                    </otherwise>
+                </choose>
+            </if>
+        </if>
+        ORDER BY REG_DT DESC
+        LIMIT #{recordCountPerPage} OFFSET #{firstIndex}
+    </select>
+
+    <!-- 제휴사 게시판 목록 수 조회 -->
+    <select id="getCoopboardListCount" parameterType="hashmap" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_BOARD_MEMBERSHIP A
+        WHERE OPEN_YN = 'Y'
+        <if test="COOP_AREA != null and COOP_AREA != ''">
+            AND COOP_AREA = #{COOP_AREA}
+        </if>
+        <if test="COOP_CATE != null and COOP_CATE != ''">
+            AND COOP_CATE = #{COOP_CATE}
+        </if>
+        <if test="searchText != null and searchText != ''">
+            <if test="searchKind != null and searchKind != ''">
+                <choose>
+                    <when test="searchKind == 'cname'">
+                        AND CREATENAME LIKE CONCAT('%', #{searchText}, '%')
+                    </when>
+                    <when test="searchKind == 'sbj'">
+                        AND SUBJECT LIKE CONCAT('%', #{searchText}, '%')
+                    </when>
+                    <otherwise>
+                        AND (SUBJECT LIKE CONCAT('%', #{searchText}, '%')
+                             OR CREATENAME LIKE CONCAT('%', #{searchText}, '%'))
+                    </otherwise>
+                </choose>
+            </if>
+        </if>
+    </select>
+
+    <!-- 제휴사 게시판 상세 조회 -->
+    <select id="coopboardView" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            COOP_BOARD_SEQ,
+            OPEN_YN,
+            CREATENAME,
+            SUBJECT,
+            CONTENT,
+            FILE_PATH,
+            FILE_NAME,
+            REAL_FILE_NAME,
+            THUMBNAIL_FILE_PATH,
+            THUMBNAIL_FILE_NAME,
+            THUMBNAIL_FILE_REAL_NAME,
+            NOTICE_TOP_YN,
+            RECOMMEND,
+            COOP_TYPE,
+            COOP_AREA,
+            COOP_CATE,
+            DATE_FORMAT(REG_DT, '%Y-%m-%d %H:%i:%s') AS REG_DT,
+            REG_ID,
+            DATE_FORMAT(UPD_DT, '%Y-%m-%d %H:%i:%s') AS UPD_DT,
+            UPD_ID,
+            HITS
+        FROM TB_BOARD_MEMBERSHIP
+        WHERE COOP_BOARD_SEQ = #{COOP_BOARD_SEQ}
+    </select>
+
+    <!-- 제휴사 코드 목록 조회 -->
+    <select id="getCoopCodeList" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            SYS_CD,
+            SYS_NM,
+            CODE_NO,
+            CODE_CD,
+            CODE_NM,
+            CODE_VAL
+        FROM TB_BA_CONFIG_CD
+        WHERE SYS_CD = #{SEARCHKEYWORD}
+          AND CODE_CD != 'AL'
+        ORDER BY CAST(CODE_NO AS UNSIGNED) ASC
+    </select>
+
+    <!-- 조회수 증가 -->
+    <update id="clickCoopboard" parameterType="hashmap">
+        UPDATE TB_BOARD_MEMBERSHIP
+        SET HITS = IFNULL(HITS, 0) + 1
+        WHERE COOP_BOARD_SEQ = #{COOP_BOARD_SEQ}
+    </update>
+
+    <!-- 쿠폰 사용 가능 여부 확인 -->
+    <select id="isUseCouponCheck" parameterType="hashmap" resultType="hashmap">
+        SELECT *
+        FROM TB_TM_PUB_COUPON
+        WHERE USE_FLAG = 'Y'
+          AND COUPON_NUM = #{COUPONCODE}
+    </select>
+
+</mapper>
