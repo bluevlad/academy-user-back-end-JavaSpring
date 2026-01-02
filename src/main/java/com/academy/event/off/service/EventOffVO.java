@@ -1,12 +1,12 @@
-package com.academy.event.service;
+package com.academy.event.off.service;
 
 import com.academy.common.CommonVO;
 
 /**
- * EventVO.java
- * 이벤트 관련 Value Object
+ * EventOffVO.java
+ * 오프라인 이벤트(설명회) Value Object
  */
-public class EventVO extends CommonVO {
+public class EventOffVO extends CommonVO {
 
     private static final long serialVersionUID = 1L;
 
@@ -31,12 +31,6 @@ public class EventVO extends CommonVO {
     /** 공개 여부 */
     private String openYn;
 
-    /** 온/오프라인 구분 (L:온라인, O:오프라인, F:무료) */
-    private String onoffDiv;
-
-    /** 이벤트 타입 (L:온라인, O:오프라인, F:무료, A:전체) */
-    private String eventType;
-
     /** 검색 유형 */
     private String searchKind;
 
@@ -46,16 +40,25 @@ public class EventVO extends CommonVO {
     /** 진행중 목록 여부 */
     private String searchingList;
 
-    /** 옵션1 SEQ */
+    /** 옵션1 SEQ (참여 선택항목) */
     private String option1Seq;
 
-    /** 댓글 내용 */
-    private String commentText;
+    /** 이름 */
+    private String userName;
 
-    /** 댓글 SEQ */
-    private String seq;
+    /** 전화번호 */
+    private String phoneNo;
 
-    /** 조회수 증가 여부 (Y/N) */
+    /** 이메일 */
+    private String email;
+
+    /** 장소 */
+    private String location;
+
+    /** SMS 수신 동의 */
+    private String smsAgree;
+
+    /** 조회수 증가 여부 */
     private String incType;
 
     // Getters and Setters
@@ -115,22 +118,6 @@ public class EventVO extends CommonVO {
         this.openYn = openYn;
     }
 
-    public String getOnoffDiv() {
-        return onoffDiv;
-    }
-
-    public void setOnoffDiv(String onoffDiv) {
-        this.onoffDiv = onoffDiv;
-    }
-
-    public String getEventType() {
-        return eventType;
-    }
-
-    public void setEventType(String eventType) {
-        this.eventType = eventType;
-    }
-
     public String getSearchKind() {
         return searchKind;
     }
@@ -163,20 +150,44 @@ public class EventVO extends CommonVO {
         this.option1Seq = option1Seq;
     }
 
-    public String getCommentText() {
-        return commentText;
+    public String getUserName() {
+        return userName;
     }
 
-    public void setCommentText(String commentText) {
-        this.commentText = commentText;
+    public void setUserName(String userName) {
+        this.userName = userName;
     }
 
-    public String getSeq() {
-        return seq;
+    public String getPhoneNo() {
+        return phoneNo;
     }
 
-    public void setSeq(String seq) {
-        this.seq = seq;
+    public void setPhoneNo(String phoneNo) {
+        this.phoneNo = phoneNo;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    public String getSmsAgree() {
+        return smsAgree;
+    }
+
+    public void setSmsAgree(String smsAgree) {
+        this.smsAgree = smsAgree;
     }
 
     public String getIncType() {

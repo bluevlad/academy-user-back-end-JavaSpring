@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.academy.mapper.EventOffMapper">
+
+    <!-- 오프라인 이벤트 목록 조회 -->
+    <select id="offEventList" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            EVENT_NO,
+            LIST_THUMBNAIL,
+            TITLE,
+            DATE_FORMAT(STR_TO_DATE(START_DATE, '%Y%m%d'), '%Y-%m-%d') AS START_DATE,
+            START_TIME,
+            DATE_FORMAT(STR_TO_DATE(END_DATE, '%Y%m%d'), '%Y-%m-%d') AS END_DATE,
+            END_TIME,
+            IFNULL(HIT, 0) AS HIT,
+            LOCATION,
+            (SELECT COUNT(*) FROM TB_EVENT_FILE WHERE EVENT_NO = T.EVENT_NO) AS ATTACH_FILE_CNT,
+            DATE_FORMAT(REG_DT, '%Y-%m-%d') AS REG_DT,
+            CASE
+                WHEN START_DATE > DATE_FORMAT(NOW(), '%Y%m%d') THEN '대기중'
+                WHEN START_DATE <![CDATA[<=]]> DATE_FORMAT(NOW(), '%Y%m%d')
+                    AND CONCAT(END_DATE, END_TIME) >= DATE_FORMAT(NOW(), '%Y%m%d%H') THEN '진행중'
+                WHEN CONCAT(END_DATE, END_TIME) <![CDATA[<]]> DATE_FORMAT(NOW(), '%Y%m%d%H') THEN '완료'
+            END AS STATUS,
+            (SELECT M.USER_NM FROM TB_MA_MEMBER M WHERE M.USER_ID = T.REG_ID) AS CREATENAME
+        FROM TB_EVENT_INFO T
+        WHERE OPEN_YN = 'Y'
+          AND ONOFF_DIV = 'O'
+        <if test="SEARCHTEXT != null and SEARCHTEXT != ''">
+            <choose>
+                <when test='SEARCHKIND == "SEARCHSUBJECT"'>
+                    AND TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                </when>
+                <when test='SEARCHKIND == "SEARCHCONTENT"'>
+                    AND CONTENTS_TEXT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                </when>
+                <otherwise>
+                    AND (TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                        OR CONTENTS_TEXT LIKE CONCAT('%', #{SEARCHTEXT}, '%'))
+                </otherwise>
+            </choose>
+        </if>
+        <if test='SEARCHINGLIST != null and SEARCHINGLIST == "Y"'>
+            AND START_DATE <![CDATA[<=]]> DATE_FORMAT(NOW(), '%Y%m%d')
+            AND CONCAT(END_DATE, END_TIME) >= DATE_FORMAT(NOW(), '%Y%m%d%H')
+        </if>
+        ORDER BY REG_DT DESC, END_DATE DESC, CAST(EVENT_NO AS UNSIGNED) DESC
+        LIMIT #{recordCountPerPage} OFFSET #{firstIndex}
+    </select>
+
+    <!-- 오프라인 이벤트 건수 조회 -->
+    <select id="offEventListCount" parameterType="hashmap" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_EVENT_INFO T
+        WHERE OPEN_YN = 'Y'
+          AND ONOFF_DIV = 'O'
+        <if test="SEARCHTEXT != null and SEARCHTEXT != ''">
+            <choose>
+                <when test='SEARCHKIND == "SEARCHSUBJECT"'>
+                    AND TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                </when>
+                <when test='SEARCHKIND == "SEARCHCONTENT"'>
+                    AND CONTENTS_TEXT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                </when>
+                <otherwise>
+                    AND (TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                        OR CONTENTS_TEXT LIKE CONCAT('%', #{SEARCHTEXT}, '%'))
+                </otherwise>
+            </choose>
+        </if>
+        <if test='SEARCHINGLIST != null and SEARCHINGLIST == "Y"'>
+            AND START_DATE <![CDATA[<=]]> DATE_FORMAT(NOW(), '%Y%m%d')
+            AND CONCAT(END_DATE, END_TIME) >= DATE_FORMAT(NOW(), '%Y%m%d%H')
+        </if>
+    </select>
+
+    <!-- 오프라인 이벤트 상세 조회 -->
+    <select id="offEventDetail" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            EVENT_NO,
+            TITLE,
+            DATE_FORMAT(REG_DT, '%Y-%m-%d') AS REG_DT,
+            DATE_FORMAT(STR_TO_DATE(START_DATE, '%Y%m%d'), '%Y-%m-%d') AS START_DATE,
+            START_TIME,
+            DATE_FORMAT(STR_TO_DATE(END_DATE, '%Y%m%d'), '%Y-%m-%d') AS END_DATE,
+            END_TIME,
+            MEMBER_GUBUN,
+            HIT,
+            IFNULL(CONTENTS_TEXT, '') AS CONTENTS_TEXT,
+            IFNULL(CONTENTS_IMG, '') AS CONTENTS_IMG,
+            OPTION1_YN,
+            OPTION2_YN,
+            OPTION3_YN,
+            OPTION4_YN,
+            LOCATION,
+            ONOFF_DIV,
+            CASE
+                WHEN START_DATE > DATE_FORMAT(NOW(), '%Y%m%d') THEN '대기중'
+                WHEN START_DATE <![CDATA[<=]]> DATE_FORMAT(NOW(), '%Y%m%d')
+                    AND CONCAT(END_DATE, END_TIME) >= DATE_FORMAT(NOW(), '%Y%m%d%H') THEN '진행중'
+                WHEN CONCAT(END_DATE, END_TIME) <![CDATA[<]]> DATE_FORMAT(NOW(), '%Y%m%d%H') THEN '완료'
+            END AS STATUS,
+            (SELECT COUNT(*) FROM TB_EVENT_RESULT WHERE EVENT_NO = #{EVENT_NO}) AS JOIN_CNT
+        FROM TB_EVENT_INFO
+        WHERE EVENT_NO = #{EVENT_NO}
+    </select>
+
+    <!-- 오프라인 이벤트 첨부파일 목록 조회 -->
+    <select id="offEventAttachFileList" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            SEQ,
+            EVENT_NO,
+            FILE_PATH,
+            FILE_NAME,
+            REAL_FILE_NAME,
+            DOWN_CNT,
+            DATE_FORMAT(REG_DT, '%Y-%m-%d') AS REG_DT
+        FROM TB_EVENT_FILE
+        WHERE EVENT_NO = #{EVENT_NO}
+        ORDER BY SEQ
+    </select>
+
+    <!-- 오프라인 이벤트 옵션1 목록 조회 (선택 항목) -->
+    <select id="offEventDetailOption1" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            SEQ,
+            EVENT_NO,
+            OPTION_TITLE,
+            DATE_FORMAT(REG_DT, '%Y-%m-%d') AS REG_DT
+        FROM TB_EVENT_OPTION1
+        WHERE EVENT_NO = #{EVENT_NO}
+        ORDER BY SEQ
+    </select>
+
+    <!-- 오프라인 이벤트 조회수 증가 -->
+    <update id="updateOffEventHits" parameterType="hashmap">
+        UPDATE TB_EVENT_INFO
+        SET HIT = IFNULL(HIT, 0) + 1
+        WHERE EVENT_NO = #{EVENT_NO}
+    </update>
+
+    <!-- 오프라인 이벤트 중복 참여 체크 -->
+    <select id="dupOffEventCheck" parameterType="hashmap" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_EVENT_RESULT
+        WHERE EVENT_NO = #{EVENT_NO}
+          AND USER_ID = #{USER_ID}
+    </select>
+
+    <!-- 오프라인 이벤트 참여 신청 -->
+    <insert id="insertOffEventResult" parameterType="hashmap">
+        INSERT INTO TB_EVENT_RESULT (
+            EVENT_NO,
+            USER_ID,
+            OPTION1_SEQ,
+            USER_NAME,
+            PHONE_NO,
+            EMAIL,
+            SMS_AGREE,
+            REG_DT
+        ) VALUES (
+            #{EVENT_NO},
+            #{USER_ID},
+            #{OPTION1_SEQ},
+            #{USER_NAME},
+            #{PHONE_NO},
+            #{EMAIL},
+            #{SMS_AGREE},
+            NOW()
+        )
+    </insert>
+
+    <!-- 오프라인 이벤트 참여 취소 -->
+    <delete id="deleteOffEventResult" parameterType="hashmap">
+        DELETE FROM TB_EVENT_RESULT
+        WHERE EVENT_NO = #{EVENT_NO}
+          AND USER_ID = #{USER_ID}
+    </delete>
+
+    <!-- 오프라인 이벤트 참여 정보 조회 -->
+    <select id="getOffEventResult" parameterType="hashmap" resultType="hashmap">
+        SELECT
+            EVENT_NO,
+            USER_ID,
+            OPTION1_SEQ,
+            USER_NAME,
+            PHONE_NO,
+            EMAIL,
+            SMS_AGREE,
+            DATE_FORMAT(REG_DT, '%Y-%m-%d %H:%i:%s') AS REG_DT
+        FROM TB_EVENT_RESULT
+        WHERE EVENT_NO = #{EVENT_NO}
+          AND USER_ID = #{USER_ID}
+    </select>
+
+</mapper>

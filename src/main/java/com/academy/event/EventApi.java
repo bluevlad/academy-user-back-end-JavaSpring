@@ -4,13 +4,14 @@ import com.academy.common.CommonUtil;
 import com.academy.common.CORSFilter;
 import com.academy.common.PaginationInfo;
 import com.academy.event.service.EventService;
+import com.academy.event.service.EventVO;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -25,6 +26,9 @@ import java.util.List;
 @RequestMapping("/api/event")
 public class EventApi extends CORSFilter {
 
+    @Value("${pageUnit:10}")
+    private int pageUnit;
+
     private final EventService eventService;
 
     @Autowired
@@ -35,28 +39,27 @@ public class EventApi extends CORSFilter {
     /**
      * 이벤트 목록 조회
      */
-    @Operation(summary = "이벤트 목록 조회", description = "이벤트 목록을 조회합니다.")
+    @Operation(summary = "이벤트 목록 조회", description = "이벤트 목록을 조회합니다. (L:온라인, O:오프라인, F:무료, A:전체)")
     @GetMapping("/getEventList")
     public JSONObject getEventList(
-            @Parameter(description = "이벤트 타입 (L:온라인, O:오프라인, F:무료, A:전체)") @RequestParam(required = false, defaultValue = "A") String eventType,
-            @Parameter(description = "검색 유형") @RequestParam(required = false) String searchKind,
-            @Parameter(description = "검색어") @RequestParam(required = false) String searchText,
-            @Parameter(description = "진행중만 조회") @RequestParam(required = false) String searchingList,
-            @Parameter(description = "페이지 번호") @RequestParam(required = false, defaultValue = "1") int pageIndex,
-            @Parameter(description = "페이지 크기") @RequestParam(required = false, defaultValue = "10") int pageUnit,
+            @ModelAttribute("EventVO") EventVO eventVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
+        setParam(params, request);
 
+        String eventType = CommonUtil.isNull(eventVO.getEventType(), "A");
         params.put("EVENT_TYPE", eventType);
-        params.put("SEARCHKIND", CommonUtil.isNull(searchKind, ""));
-        params.put("SEARCHTEXT", CommonUtil.isNull(searchText, ""));
-        params.put("SEARCHINGLIST", CommonUtil.isNull(searchingList, ""));
+        params.put("SEARCHKIND", CommonUtil.isNull(eventVO.getSearchKind(), ""));
+        params.put("SEARCHTEXT", CommonUtil.isNull(eventVO.getSearchText(), ""));
+        params.put("SEARCHINGLIST", CommonUtil.isNull(eventVO.getSearchingList(), ""));
 
-        // 페이징 처리
+        int currentPage = eventVO.getCurrentPage() > 0 ? eventVO.getCurrentPage() : 1;
+        int recordCountPerPage = eventVO.getPageRow() > 0 ? eventVO.getPageRow() : pageUnit;
+
         PaginationInfo paginationInfo = new PaginationInfo();
-        paginationInfo.setCurrentPageNo(pageIndex);
-        paginationInfo.setRecordCountPerPage(pageUnit);
+        paginationInfo.setCurrentPageNo(currentPage);
+        paginationInfo.setRecordCountPerPage(recordCountPerPage);
         paginationInfo.setPageSize(10);
 
         int totalCount = eventService.eventListCount(params);
@@ -65,14 +68,13 @@ public class EventApi extends CORSFilter {
         params.put("startNo", String.valueOf(paginationInfo.getFirstRecordIndex()));
         params.put("endNo", String.valueOf(paginationInfo.getLastRecordIndex()));
 
-        HashMap<String, Object> jsonObject = new HashMap<>();
-
         List<HashMap<String, Object>> eventList = eventService.eventList(params);
 
+        HashMap<String, Object> jsonObject = new HashMap<>();
         jsonObject.put("eventList", eventList);
         jsonObject.put("totalCount", totalCount);
-        jsonObject.put("pageIndex", pageIndex);
-        jsonObject.put("pageUnit", pageUnit);
+        jsonObject.put("currentPage", currentPage);
+        jsonObject.put("totalPage", paginationInfo.getTotalPageCount());
         jsonObject.put("retMsg", "OK");
 
         return new JSONObject(jsonObject);
@@ -84,17 +86,23 @@ public class EventApi extends CORSFilter {
     @Operation(summary = "이벤트 상세 조회", description = "이벤트 상세 정보를 조회합니다.")
     @GetMapping("/getEventDetail")
     public JSONObject getEventDetail(
-            @Parameter(description = "이벤트 번호", required = true) @RequestParam String eventNo,
+            @ModelAttribute("EventVO") EventVO eventVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
+        setParam(params, request);
+
+        String eventNo = CommonUtil.isNull(eventVO.getEventNo(), "");
         params.put("searchEventNo", eventNo);
         params.put("EVENT_NO", eventNo);
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
-        // 조회수 증가
-        eventService.updateEventHits(params);
+        // 조회수 증가 (INCTYPE이 'Y'가 아닌 경우에만)
+        String incType = CommonUtil.isNull(eventVO.getIncType(), "Y");
+        if ("Y".equals(incType)) {
+            eventService.updateEventHits(params);
+        }
 
         HashMap<String, Object> eventDetail = eventService.eventDetail(params);
         List<HashMap<String, Object>> fileList = eventService.eventAttachFileList(params);
@@ -121,16 +129,17 @@ public class EventApi extends CORSFilter {
     @Operation(summary = "이벤트 강좌 목록 조회", description = "이벤트 관련 강좌 목록을 조회합니다.")
     @GetMapping("/getEventLectureList")
     public JSONObject getEventLectureList(
-            @Parameter(description = "이벤트 번호", required = true) @RequestParam String eventNo,
+            @ModelAttribute("EventVO") EventVO eventVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        params.put("EVENT_NO", eventNo);
+        setParam(params, request);
 
-        HashMap<String, Object> jsonObject = new HashMap<>();
+        params.put("EVENT_NO", CommonUtil.isNull(eventVO.getEventNo(), ""));
 
         List<HashMap<String, Object>> lectureList = eventService.eventLectureList(params);
 
+        HashMap<String, Object> jsonObject = new HashMap<>();
         jsonObject.put("lectureList", lectureList);
         jsonObject.put("retMsg", "OK");
 
@@ -143,10 +152,14 @@ public class EventApi extends CORSFilter {
     @Operation(summary = "이벤트 참여", description = "이벤트에 참여합니다.")
     @PostMapping("/joinEvent")
     public JSONObject joinEvent(
-            @RequestBody HashMap<String, String> params,
+            @ModelAttribute("EventVO") EventVO eventVO,
             HttpServletRequest request) throws Exception {
 
+        HashMap<String, String> params = new HashMap<>();
         setParam(params, request);
+
+        params.put("EVENT_NO", CommonUtil.isNull(eventVO.getEventNo(), ""));
+        params.put("OPTION1_SEQ", CommonUtil.isNull(eventVO.getOption1Seq(), ""));
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
@@ -183,10 +196,14 @@ public class EventApi extends CORSFilter {
     @Operation(summary = "이벤트 댓글 등록", description = "이벤트에 댓글을 등록합니다.")
     @PostMapping("/insertEventComment")
     public JSONObject insertEventComment(
-            @RequestBody HashMap<String, String> params,
+            @ModelAttribute("EventVO") EventVO eventVO,
             HttpServletRequest request) throws Exception {
 
+        HashMap<String, String> params = new HashMap<>();
         setParam(params, request);
+
+        params.put("EVENT_NO", CommonUtil.isNull(eventVO.getEventNo(), ""));
+        params.put("COMMENT_TEXT", CommonUtil.isNull(eventVO.getCommentText(), ""));
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
@@ -215,10 +232,13 @@ public class EventApi extends CORSFilter {
     @Operation(summary = "이벤트 댓글 삭제", description = "이벤트 댓글을 삭제합니다.")
     @PostMapping("/deleteEventComment")
     public JSONObject deleteEventComment(
-            @RequestBody HashMap<String, String> params,
+            @ModelAttribute("EventVO") EventVO eventVO,
             HttpServletRequest request) throws Exception {
 
+        HashMap<String, String> params = new HashMap<>();
         setParam(params, request);
+
+        params.put("SEQ", CommonUtil.isNull(eventVO.getSeq(), ""));
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
@@ -250,12 +270,24 @@ public class EventApi extends CORSFilter {
 
         if (session == null) {
             params.put("USER_ID", "");
+            params.put("USER_NM", "");
+            params.put("REG_ID", "");
+            params.put("UPD_ID", "");
+            params.put("ISLOGIN", "N");
         } else {
             HashMap<String, String> loginInfo = (HashMap<String, String>) session.getAttribute("userInfo");
             if (loginInfo != null && !loginInfo.isEmpty()) {
                 params.put("USER_ID", loginInfo.get("USER_ID"));
+                params.put("USER_NM", loginInfo.get("USER_NM"));
+                params.put("REG_ID", loginInfo.get("USER_ID"));
+                params.put("UPD_ID", loginInfo.get("USER_ID"));
+                params.put("ISLOGIN", "Y");
             } else {
                 params.put("USER_ID", "");
+                params.put("USER_NM", "");
+                params.put("REG_ID", "");
+                params.put("UPD_ID", "");
+                params.put("ISLOGIN", "N");
             }
         }
     }
