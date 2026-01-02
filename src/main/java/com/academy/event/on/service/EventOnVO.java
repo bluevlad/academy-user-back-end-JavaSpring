@@ -1,12 +1,12 @@
-package com.academy.event.service;
+package com.academy.event.on.service;
 
 import com.academy.common.CommonVO;
 
 /**
- * EventVO.java
- * 이벤트 관련 Value Object
+ * EventOnVO.java
+ * 온라인 동영상 이벤트 Value Object
  */
-public class EventVO extends CommonVO {
+public class EventOnVO extends CommonVO {
 
     private static final long serialVersionUID = 1L;
 
@@ -31,12 +31,6 @@ public class EventVO extends CommonVO {
     /** 공개 여부 */
     private String openYn;
 
-    /** 온/오프라인 구분 (L:온라인, O:오프라인, F:무료) */
-    private String onoffDiv;
-
-    /** 이벤트 타입 (L:온라인, O:오프라인, F:무료, A:전체) */
-    private String eventType;
-
     /** 검색 유형 */
     private String searchKind;
 
@@ -46,8 +40,8 @@ public class EventVO extends CommonVO {
     /** 진행중 목록 여부 */
     private String searchingList;
 
-    /** 옵션1 SEQ */
-    private String option1Seq;
+    /** 강좌 코드 */
+    private String lecCode;
 
     /** 댓글 내용 */
     private String commentText;
@@ -55,8 +49,11 @@ public class EventVO extends CommonVO {
     /** 댓글 SEQ */
     private String seq;
 
-    /** 조회수 증가 여부 (Y/N) */
+    /** 조회수 증가 여부 */
     private String incType;
+
+    /** 출석 체크 일자 */
+    private String attendanceDate;
 
     // Getters and Setters
     public String getEventNo() {
@@ -115,22 +112,6 @@ public class EventVO extends CommonVO {
         this.openYn = openYn;
     }
 
-    public String getOnoffDiv() {
-        return onoffDiv;
-    }
-
-    public void setOnoffDiv(String onoffDiv) {
-        this.onoffDiv = onoffDiv;
-    }
-
-    public String getEventType() {
-        return eventType;
-    }
-
-    public void setEventType(String eventType) {
-        this.eventType = eventType;
-    }
-
     public String getSearchKind() {
         return searchKind;
     }
@@ -155,12 +136,12 @@ public class EventVO extends CommonVO {
         this.searchingList = searchingList;
     }
 
-    public String getOption1Seq() {
-        return option1Seq;
+    public String getLecCode() {
+        return lecCode;
     }
 
-    public void setOption1Seq(String option1Seq) {
-        this.option1Seq = option1Seq;
+    public void setLecCode(String lecCode) {
+        this.lecCode = lecCode;
     }
 
     public String getCommentText() {
@@ -185,5 +166,13 @@ public class EventVO extends CommonVO {
 
     public void setIncType(String incType) {
         this.incType = incType;
+    }
+
+    public String getAttendanceDate() {
+        return attendanceDate;
+    }
+
+    public void setAttendanceDate(String attendanceDate) {
+        this.attendanceDate = attendanceDate;
     }
 }
