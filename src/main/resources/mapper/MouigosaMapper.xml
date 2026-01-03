@@ -1,0 +1,386 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.academy.mapper.MouigosaMapper">
+
+    <!-- 모의고사 등록 리스트 -->
+    <select id="getMouigosaRegistrationList" parameterType="hashMap" resultType="hashMap">
+        SELECT A.*
+        FROM (
+            SELECT ID
+                , MOCKCODE
+                , MOCKNAME
+                , EXAMYEAR
+                , EXAMROUND
+                , ISEXAMTYPEON
+                , ISEXAMTYPEOFF
+                , EXAMTIME
+                , EXAMCOST
+                , DISCOUNTRATIO
+                , SALEAMOUNTS
+                , CLASSCODE
+                , (SELECT NAME FROM TB_CATEGORY_INFO WHERE CODE = A.CLASSCODE AND P_CODE = 'CLASSCODE') AS NAME
+                , DATE_FORMAT(REG_DT, '%Y-%m-%d') AS REG_DT
+                , CASE USEFLAG
+                    WHEN '0' THEN '비활성'
+                    WHEN '1' THEN '활성'
+                    WHEN '2' THEN '마감'
+                    WHEN '3' THEN '상시'
+                  END AS USEFLAG
+                , (SELECT COUNT(*) FROM TB_TORDERS B WHERE B.EXAMCODE = A.MOCKCODE) AS STSCNT
+                , EXAMSTARTTIME
+                , DATE_FORMAT(STR_TO_DATE(EXAMSTARTTIME,'%Y%m%d%H%i%s'),'%m/%d %p%h:%i') AS EXAMSTARTTIME_FOMAT
+                , CONCAT(SUBSTR(EXAMSTARTTIME,5,2), '/', SUBSTR(EXAMSTARTTIME,7,2)) AS EXAMSTARTTIME_MD
+                , EXAMENDTIME
+                , RECEIPTSTARTTIME
+                , CONCAT(
+                    SUBSTR(RECEIPTSTARTTIME,5,2), '/', SUBSTR(EXAMSTARTTIME,7,2), ' ', SUBSTR(EXAMSTARTTIME,9,2), '시  ~ ',
+                    SUBSTR(RECEIPTENDTIME,5,2), '/', SUBSTR(RECEIPTENDTIME,7,2), ' ', SUBSTR(RECEIPTENDTIME,9,2), '시'
+                  ) AS RECEIPTSTARTTIME_MDT
+                , RECEIPTENDTIME
+                , CAST(DATE_FORMAT(NOW(), '%Y%m%d%H%i') AS UNSIGNED) AS CURRTIME
+            <choose>
+              <when test="REG_ID !=null and REG_ID != '' ">
+                , (SELECT COUNT(*) FROM TB_TORDERS C WHERE C.EXAMCODE = A.MOCKCODE AND C.USER_ID = #{REG_ID}) AS REGCNT
+              </when>
+              <otherwise>
+                , '0' AS REGCNT
+              </otherwise>
+            </choose>
+            FROM TB_TMOCKREGISTRATION A
+            WHERE DATE_FORMAT(NOW(), '%Y%m%d%H%i') BETWEEN RECEIPTSTARTTIME AND RECEIPTENDTIME
+            <if test='USEFLAG !=null and USEFLAG != "" and USEFLAG == "Y" '>
+              <choose>
+                <when test='topMenuType != null and topMenuType != ""'>
+                  <choose>
+                    <when test='topMenuType == "F" '>
+              AND USEFLAG = '1'
+                    </when>
+                    <otherwise>
+              AND USEFLAG = '3'
+                    </otherwise>
+                  </choose>
+                </when>
+                <otherwise>
+              AND (USEFLAG = '1' OR USEFLAG = '3')
+                </otherwise>
+              </choose>
+            </if>
+            <if test="EXAMYEAR !=null and EXAMYEAR != '' ">
+              AND EXAMYEAR = #{EXAMYEAR}
+            </if>
+            <if test="EXAMROUND !=null and EXAMROUND != '' ">
+              AND EXAMROUND = #{EXAMROUND}
+            </if>
+            <if test="ISEXAMTYPEON !=null and ISEXAMTYPEON != '' ">
+              AND ISEXAMTYPEON = #{ISEXAMTYPEON}
+            </if>
+            <if test="ISEXAMTYPEOFF !=null and ISEXAMTYPEOFF != '' ">
+              AND ISEXAMTYPEOFF = #{ISEXAMTYPEOFF}
+            </if>
+            <if test='topMenu != null and topMenu != "" and topMenu != "MAIN" and topMenu == "000" '>
+              <choose>
+                <when test='topMenu == "002"'>AND (CLASSCODE = #{topMenu} OR CLASSCODE = '020')</when>
+                <otherwise>AND CLASSCODE = #{topMenu}</otherwise>
+              </choose>
+            </if>
+            <if test="searchKeyWord != null">
+              <choose>
+                <when test="searchFlag == 1">
+                AND CLASSCODE IN (SELECT CODE
+                          FROM TB_CATEGORY_INFO
+                          WHERE NAME LIKE CONCAT('%',#{SEARCHKEYWORD},'%')
+                          AND P_CODE = 'CLASSCODE')
+                </when>
+              </choose>
+            </if>
+            ORDER BY ID DESC
+        ) A
+        LIMIT #{recordCountPerPage} OFFSET #{firstIndex}
+    </select>
+
+    <!-- 모의고사 등록 리스트 카운트 -->
+    <select id="getRegistrationCount" parameterType="hashMap" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_TMOCKREGISTRATION
+        WHERE DATE_FORMAT(NOW(), '%Y%m%d%H%i') BETWEEN RECEIPTSTARTTIME AND RECEIPTENDTIME
+        <if test='USEFLAG !=null and USEFLAG != "" and USEFLAG == "Y" '>
+          <choose>
+            <when test='topMenuType != null and topMenuType != ""'>
+              <choose>
+                <when test='topMenuType == "F" '>
+          AND USEFLAG = '1'
+                </when>
+                <otherwise>
+          AND USEFLAG = '3'
+                </otherwise>
+              </choose>
+            </when>
+            <otherwise>
+          AND (USEFLAG = '1' OR USEFLAG = '3')
+            </otherwise>
+          </choose>
+        </if>
+        <if test="EXAMYEAR !=null and EXAMYEAR != '' ">
+          AND EXAMYEAR = #{EXAMYEAR}
+        </if>
+        <if test="EXAMROUND !=null and EXAMROUND != '' ">
+          AND EXAMROUND = #{EXAMROUND}
+        </if>
+        <if test="ISEXAMTYPEON !=null and ISEXAMTYPEON != '' ">
+          AND ISEXAMTYPEON = #{ISEXAMTYPEON}
+        </if>
+        <if test="ISEXAMTYPEOFF !=null and ISEXAMTYPEOFF != '' ">
+          AND ISEXAMTYPEOFF = #{ISEXAMTYPEOFF}
+        </if>
+        <if test='topMenu != null and topMenu != "" and topMenu != "MAIN" and topMenu == "000" '>
+          <choose>
+            <when test='topMenu == "002"'>AND (CLASSCODE = #{topMenu} OR CLASSCODE = '020')</when>
+            <otherwise>AND CLASSCODE = #{topMenu}</otherwise>
+          </choose>
+        </if>
+        <if test="searchKeyWord != null">
+          <choose>
+            <when test="searchFlag == 1">
+            AND CLASSCODE IN (SELECT CODE
+                      FROM TB_CATEGORY_INFO
+                      WHERE NAME LIKE CONCAT('%',#{SEARCHKEYWORD},'%')
+                      AND P_CODE = 'CLASSCODE')
+            </when>
+          </choose>
+        </if>
+    </select>
+
+    <!-- 모의고사 정보 -->
+    <select id="getUpdateRegistrationDetail" parameterType="hashMap" resultType="hashMap">
+        SELECT ID
+          , MOCKCODE
+          , MOCKNAME
+          , EXAMYEAR
+          , EXAMROUND
+          , OFFCLOSEPERSONNUMBER
+          , CLASSCODE
+          , EXAMSTARTTIME
+          , DATE_FORMAT(STR_TO_DATE(EXAMSTARTTIME,'%Y%m%d%H%i%s'),'%m/%d %p%h:%i') AS EXAMSTARTTIME_FOMAT
+          , CAST(DATE_FORMAT(NOW(), '%Y%m%d%H%i') AS UNSIGNED) AS CURRTIME
+          , EXAMENDTIME
+          , EXAMPERIOD
+          , EXAMTIME
+          , FLOOR(EXAMTIME / 60) AS EXAMTIME1
+          , (EXAMTIME - (60 * FLOOR(EXAMTIME / 60))) AS EXAMTIME2
+          , RECEIPTSTARTTIME
+          , RECEIPTENDTIME
+          , EXAMCOST
+          , DISCOUNTRATIO
+          , SALEAMOUNTS
+          , USEFLAG
+          , ISEXAMTYPEON
+          , ISEXAMTYPEOFF
+          , EXAMPERIODTYPE
+          , LECCODE
+          , (SELECT EXAMSPARETIME FROM TB_TORDERS WHERE IDENTYID = #{IDENTYID}) AS EXAMSPARETIME
+          <if test="ITEMID != null">
+          , (SELECT ENTRYNUM FROM TB_TITEM WHERE ITEMID = #{ITEMID}) AS ENTRYNUM
+          , (SELECT QUESTIONREGISTRATIONOPTION FROM TB_TITEM WHERE ITEMID = #{ITEMID}) AS QUESTIONREGISTRATIONOPTION
+          , (SELECT COUNT(*) FROM TB_TITEMPOOL WHERE ITEMID = #{ITEMID}) AS QUESTIONNUM
+          , (SELECT SUBJECT_NM
+            FROM TB_SUBJECT_INFO
+            WHERE SUBJECT_CD = (SELECT SUBJECT_CD FROM TB_TITEM WHERE ITEMID = #{ITEMID})) AS SUBJECT_NM
+          </if>
+          <choose>
+            <when test="REG_ID !=null and REG_ID != '' ">
+             , (SELECT COUNT(*) FROM TB_TORDERS C WHERE C.EXAMCODE = A.MOCKCODE AND C.USER_ID = #{REG_ID}) AS REGCNT
+            </when>
+            <otherwise>
+             , '0' AS REGCNT
+            </otherwise>
+          </choose>
+        FROM TB_TMOCKREGISTRATION A
+        WHERE MOCKCODE = #{MOCKCODE}
+    </select>
+
+    <!-- 과목 리스트 -->
+    <select id="getSubjectList" parameterType="hashMap" resultType="hashMap">
+        SELECT B.SUBJECT_CD
+           , (SELECT SUBJECT_NM FROM TB_SUBJECT_INFO WHERE SUBJECT_CD = B.SUBJECT_CD) AS SUBJECT_NM
+           , A.ITEMID
+           , A.EXAMSTATUS
+           , B.QUESTIONNUM
+           , B.QUESTIONFID
+           , (SELECT FILEPATH FROM TB_TATTACHFILE WHERE ATTACHFILEID = B.QUESTIONFID) AS FILEPATH
+        FROM TB_TUSERCHOICESUBJECT A, TB_TITEM B
+        WHERE A.ITEMID = B.ITEMID
+        AND A.IDENTYID = #{IDENTYID}
+        ORDER BY A.SUBJECTTYPEDIVISION ASC, A.SUBJECTORDER ASC
+    </select>
+
+    <!-- 문제 리스트 -->
+    <select id="getQuestionList" parameterType="hashMap" resultType="hashMap">
+        SELECT A.IDENTYID
+            , A.ITEMID
+            , A.QUESTIONNUMBER
+            , A.MOCKCODE
+            , A.ANSWERNUMBER
+            , A.CORRECTYN
+            , B.QUESTIONPATTERN
+            , B.LEVELDIFFICULTY
+            , B.QUESTIONRANGE
+            , B.ANSWERNUMBER AS QANSWERNUMBER
+            , C.SUBJECT_CD
+            , (SELECT SUBJECT_NM FROM TB_SUBJECT_INFO WHERE SUBJECT_CD = C.SUBJECT_CD) AS SUBJECT_NM
+        FROM TB_TEXAMINEEANSWER A, TB_TITEMPOOL B, TB_TITEM C
+        WHERE A.ITEMID = B.ITEMID
+        AND A.QUESTIONNUMBER = B.QUESTIONNUMBER
+        AND A.ITEMID = C.ITEMID
+        AND A.IDENTYID = #{IDENTYID}
+        AND A.ITEMID = #{ITEMID}
+        ORDER BY A.QUESTIONNUMBER ASC
+    </select>
+
+    <!-- 과목별 문제등록 리스트 카운트 -->
+    <select id="getCnt" parameterType="hashMap" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_TEXAMINEEANSWER
+        WHERE IDENTYID = #{IDENTYID}
+        AND ITEMID = #{ITEMID}
+        AND MOCKCODE = #{MOCKCODE}
+        AND QUESTIONNUMBER = #{QUESTIONNUMBER}
+    </select>
+
+    <!-- 모의고사 답안 등록 -->
+    <insert id="insertAnswerMouigosa" parameterType="hashMap">
+        INSERT INTO TB_TEXAMINEEANSWER
+          ( IDENTYID
+          , ITEMID
+          , QUESTIONNUMBER
+          , MOCKCODE
+          , ANSWERNUMBER
+          , CORRECTYN
+          , REG_ID
+          , REG_DT
+          )
+        VALUES
+          ( #{IDENTYID}
+          , #{ITEMID}
+          , #{QUESTIONNUMBER}
+          , #{MOCKCODE}
+          , IFNULL(#{ANSWERNUMBER}, '')
+          , IFNULL(#{CORRECTYN}, 'N')
+          , #{USER_ID}
+          , NOW()
+          )
+    </insert>
+
+    <!-- 답안 수정 -->
+    <update id="updateAnswerMouigosa" parameterType="hashMap">
+        <foreach collection="ANSWS" item="item" separator=";">
+            UPDATE TB_TEXAMINEEANSWER
+            SET ANSWERNUMBER = #{item.ANSWERNUMBER}
+                , CORRECTYN = #{item.CORRECTYN}
+                , UPD_ID = #{USER_ID}
+                , UPD_DT = NOW()
+            WHERE IDENTYID = #{IDENTYID}
+            AND ITEMID = #{ITEMID}
+            AND MOCKCODE = #{MOCKCODE}
+            AND QUESTIONNUMBER = #{item.QUESTIONNUMBER}
+        </foreach>
+    </update>
+
+    <!-- 응시상태,응시시작일시 업데이트 -->
+    <update id="mouigosaStatusUpdate12" parameterType="hashMap">
+        UPDATE TB_TORDERS
+        SET EXAMSTATUS = IFNULL(#{EXAMSTATUS}, EXAMSTATUS)
+          <if test="EXAMSTARTTIME != null and EXAMSTARTTIME != ''"> , EXAMSTARTTIME = NOW() </if>
+          <if test="EXAMENDTIME != null and EXAMENDTIME != ''"> , EXAMENDTIME = NOW() </if>
+          <if test="EXAMIP != null and EXAMIP != ''" > , EXAMIP = #{EXAMIP} </if>
+          <if test="tcounter != null and tcounter != ''" > , EXAMSPARETIME = #{tcounter} </if>
+          , UPD_ID = #{USER_ID}
+          , UPD_DT = NOW()
+        WHERE IDENTYID = #{IDENTYID}
+    </update>
+
+    <!-- 응시상태,응시시작일시 업데이트 (과목) -->
+    <update id="mouigosaStatusUpdate2" parameterType="hashMap">
+        UPDATE TB_TUSERCHOICESUBJECT
+        SET EXAMSTATUS = #{EXAMSTATUS}
+          <if test="EXAMSSTARTTIME != null and EXAMSSTARTTIME != ''"> , EXAMSSTARTTIME = NOW() </if>
+          , UPD_ID = #{USER_ID}
+          , UPD_DT = NOW()
+        WHERE IDENTYID = #{IDENTYID}
+        AND ITEMID = #{ITEMID}
+    </update>
+
+    <!-- 응시상태,응시종료일시 업데이트 -->
+    <update id="mouigosaStatusUpdate3" parameterType="hashMap">
+        UPDATE TB_TORDERS
+        SET EXAMSTATUS = #{EXAMSTATUS}
+          <if test="tcounter != null and tcounter != ''" > , EXAMSPARETIME = #{tcounter} </if>
+          <if test="EXAMIP != null and EXAMIP != ''" > , EXAMIP = #{EXAMIP} </if>
+          <if test="EXAMENDTIME != null and EXAMENDTIME != ''" >, EXAMENDTIME = NOW() </if>
+          , UPD_ID = #{USER_ID}
+          , UPD_DT = NOW()
+        WHERE IDENTYID = #{IDENTYID}
+    </update>
+
+    <!-- 응시상태 업데이트 (전체 종료) -->
+    <update id="mouigosaStatusUpdate4" parameterType="hashMap">
+        UPDATE TB_TUSERCHOICESUBJECT
+        SET EXAMSTATUS = #{EXAMSTATUS}
+          <if test="EXAMSSTARTTIME != null and EXAMSSTARTTIME != ''"> , EXAMSSTARTTIME = NOW() </if>
+          , UPD_ID = #{USER_ID}
+          , UPD_DT = NOW()
+        WHERE IDENTYID = #{IDENTYID}
+    </update>
+
+    <!-- 미응시 답안 수 조회 -->
+    <select id="getCnt2" parameterType="hashMap" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_TEXAMINEEANSWER
+        WHERE IDENTYID = #{IDENTYID}
+        AND ITEMID = #{ITEMID}
+        AND MOCKCODE = #{MOCKCODE}
+        AND (ANSWERNUMBER IS NULL OR ANSWERNUMBER = '')
+    </select>
+
+    <!-- 전체 문항 수 조회 -->
+    <select id="getCnt3" parameterType="hashMap" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_TEXAMINEEANSWER
+        WHERE IDENTYID = #{IDENTYID}
+        AND ITEMID = #{ITEMID}
+        AND MOCKCODE = #{MOCKCODE}
+    </select>
+
+    <!-- 응시 완료 과목 수 조회 -->
+    <select id="getCnt4" parameterType="hashMap" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_TUSERCHOICESUBJECT
+        WHERE IDENTYID = #{IDENTYID}
+        AND EXAMSTATUS = '3'
+    </select>
+
+    <!-- 전체 과목 수 조회 -->
+    <select id="getCnt5" parameterType="hashMap" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_TUSERCHOICESUBJECT
+        WHERE IDENTYID = #{IDENTYID}
+    </select>
+
+    <!-- 문제별 정답 조회 -->
+    <select id="selectQuestionAnswers" parameterType="hashMap" resultType="hashMap">
+        SELECT QUESTIONNUMBER, ANSWERNUMBER
+        FROM TB_TITEMPOOL
+        WHERE ITEMID = #{ITEMID}
+        ORDER BY QUESTIONNUMBER ASC
+    </select>
+
+    <!-- 다음 과목 조회 -->
+    <select id="getCount1List2" parameterType="hashMap" resultType="hashMap">
+        SELECT A.ITEMID, A.SUBJECTTYPEDIVISION, A.SUBJECTORDER
+        FROM TB_TUSERCHOICESUBJECT A
+        WHERE A.IDENTYID = #{IDENTYID}
+        AND A.EXAMSTATUS != '3'
+        ORDER BY A.SUBJECTTYPEDIVISION ASC, A.SUBJECTORDER ASC
+        LIMIT 1
+    </select>
+
+</mapper>

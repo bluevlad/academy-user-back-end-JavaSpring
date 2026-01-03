@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.academy.mapper.PackageLectureMapper">
+
+    <!-- 패키지 강의 목록 조회 -->
+    <select id="packageLectureOnList" parameterType="hashMap" resultType="hashMap">
+        SELECT * FROM (
+            SELECT TBL.*, @rownum := @rownum + 1 AS rnum
+            FROM (
+                SELECT A.LECCODE, A.CATEGORY_CD, A.LEARNING_CD, A.LEC_TYPE_CHOICE, A.SUBJECT_ISUSE, A.SUBJECT_TITLE,
+                    (SELECT NAME FROM TB_LEARNING_FORM_INFO WHERE CODE = A.LEARNING_CD) LEARNING_NM,
+                    (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = A.SUBJECT_TEACHER) AS SUBJECT_TEACHER_NM,
+                    DATE_FORMAT(STR_TO_DATE(CONCAT(A.SUBJECT_OFF_OPEN_YEAR, A.SUBJECT_OFF_OPEN_MONTH, A.SUBJECT_OFF_OPEN_DAY), '%Y%m%d'), '%Y-%m-%d') START_DATE,
+                    A.SUBJECT_PERIOD,
+                    A.SUBJECT_OPTION,
+                    A.SUBJECT_MOVIE,
+                    A.SUBJECT_PMP,
+                    A.SUBJECT_MOVIE_PMP,
+                    A.SUBJECT_MOVIE_MP4,
+                    A.SUBJECT_MOVIE_VOD_MP4
+                FROM TB_LEC_MST A
+                WHERE A.SUBJECT_ISUSE = 'Y'
+                AND (A.SUBJECT_PRICE &lt;&gt; 0 OR A.SUBJECT_PRICE IS NULL)
+                <if test='LEC_TYPE_CHOICE != null and LEC_TYPE_CHOICE != ""'>
+                    AND A.LEC_TYPE_CHOICE = #{LEC_TYPE_CHOICE}
+                </if>
+                <if test='CATEGORY_CD != null and CATEGORY_CD != ""'>
+                    AND A.CATEGORY_CD = #{CATEGORY_CD}
+                </if>
+                <if test='LEARNING_CD != null and LEARNING_CD != ""'>
+                    AND A.LEARNING_CD = #{LEARNING_CD}
+                </if>
+                <if test='SEARCHTEXT != null and SEARCHTEXT != ""'>
+                    <if test='SEARCHTYPE != null and SEARCHTYPE != ""'>
+                        <if test='SEARCHTYPE == "SUBJECT_TITLE"'>
+                            AND A.SUBJECT_TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                        </if>
+                        <if test='SEARCHTYPE == "SUBJECT_TEACHER_NM"'>
+                            AND (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = A.SUBJECT_TEACHER) LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                        </if>
+                    </if>
+                    <if test='SEARCHTYPE == null or SEARCHTYPE == ""'>
+                        AND (
+                            A.SUBJECT_TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                            OR (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = A.SUBJECT_TEACHER) LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                        )
+                    </if>
+                </if>
+                ORDER BY A.SEQ DESC
+            ) TBL, (SELECT @rownum := 0) r
+        ) T
+        WHERE rnum &gt; #{startNo} AND rnum &lt;= #{endNo}
+    </select>
+
+    <!-- 패키지 강의 목록 건수 조회 -->
+    <select id="packageLectureOnListCount" parameterType="hashMap" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_LEC_MST A
+        WHERE A.SUBJECT_ISUSE = 'Y'
+        AND (A.SUBJECT_PRICE &lt;&gt; 0 OR A.SUBJECT_PRICE IS NULL)
+        <if test='LEC_TYPE_CHOICE != null and LEC_TYPE_CHOICE != ""'>
+            AND A.LEC_TYPE_CHOICE = #{LEC_TYPE_CHOICE}
+        </if>
+        <if test='CATEGORY_CD != null and CATEGORY_CD != ""'>
+            AND A.CATEGORY_CD = #{CATEGORY_CD}
+        </if>
+        <if test='SEARCHTEXT != null and SEARCHTEXT != ""'>
+            <if test='SEARCHTYPE != null and SEARCHTYPE != ""'>
+                <if test='SEARCHTYPE == "SUBJECT_TITLE"'>
+                    AND A.SUBJECT_TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                </if>
+                <if test='SEARCHTYPE == "SUBJECT_TEACHER_NM"'>
+                    AND (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = A.SUBJECT_TEACHER) LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                </if>
+            </if>
+            <if test='SEARCHTYPE == null or SEARCHTYPE == ""'>
+                AND (
+                    A.SUBJECT_TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                    OR (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = A.SUBJECT_TEACHER) LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                )
+            </if>
+        </if>
+    </select>
+
+    <!-- 패키지 강의 상세 조회 (필수 강좌) -->
+    <select id="packageLectureOnDetail1" parameterType="hashMap" resultType="hashMap">
+        SELECT TBL.*
+        FROM (
+            SELECT A.LECCODE, A.CATEGORY_CD, A.LEARNING_CD, A.LEC_TYPE_CHOICE, A.SUBJECT_TEACHER, A.SUBJECT_SJT_CD, A.SUBJECT_TITLE,
+                (SELECT NAME FROM TB_LEARNING_FORM_INFO WHERE CODE = A.LEARNING_CD) LEARNING_NM,
+                (SELECT SUBJECT_NM FROM TB_SUBJECT_INFO WHERE SUBJECT_CD = A.SUBJECT_SJT_CD) AS SUBJECT_NM,
+                (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = A.SUBJECT_TEACHER) AS SUBJECT_TEACHER_NM,
+                (SELECT PRF_ONPIC2 FROM TB_MA_MEMBER WHERE USER_ID = A.SUBJECT_TEACHER) AS SUBJECT_TEACHER_PIC1,
+                DATE_FORMAT(STR_TO_DATE(CONCAT(A.SUBJECT_OFF_OPEN_YEAR, A.SUBJECT_OFF_OPEN_MONTH, A.SUBJECT_OFF_OPEN_DAY), '%Y%m%d'), '%Y-%m-%d') START_DATE,
+                DATE_FORMAT(DATE_ADD(STR_TO_DATE(CONCAT(A.SUBJECT_OFF_OPEN_YEAR, A.SUBJECT_OFF_OPEN_MONTH, A.SUBJECT_OFF_OPEN_DAY), '%Y%m%d'), INTERVAL A.SUBJECT_PERIOD DAY), '%Y-%m-%d') END_DATE,
+                A.SUBJECT_PERIOD,
+                A.LEC_SCHEDULE,
+                A.LEC_COUNT,
+                IFNULL(A.MOV_ING, 'I') MOV_ING,
+                A.SUBJECT_PRICE,
+                A.MUST_PRF_IMG,
+                A.SEL_PRF_IMG,
+                <choose>
+                    <when test='discount != null and discount != ""'>
+                        (A.SUBJECT_MOVIE * ((100 - CAST(#{discount} AS DECIMAL)) / 100)) SUBJECT_MOVIE,
+                        (A.SUBJECT_PMP * ((100 - CAST(#{discount} AS DECIMAL)) / 100)) SUBJECT_PMP,
+                        (A.SUBJECT_MOVIE_PMP * ((100 - CAST(#{discount} AS DECIMAL)) / 100)) SUBJECT_MOVIE_PMP,
+                    </when>
+                    <otherwise>
+                        A.SUBJECT_MOVIE,
+                        A.SUBJECT_PMP,
+                        A.SUBJECT_MOVIE_PMP,
+                    </otherwise>
+                </choose>
+                A.SUBJECT_MOVIE_MP4, A.SUBJECT_MOVIE_VOD_MP4,
+                A.SUBJECT_DISCOUNT,
+                B.LECCODE PLECCODE,
+                B.SORT,
+                B.GUBUN
+            FROM TB_LEC_MST A
+            INNER JOIN TB_LEC_JONG B ON A.LECCODE = B.MST_LECCODE
+        ) TBL
+        WHERE TBL.PLECCODE = #{LECCODE} AND GUBUN = 1
+        ORDER BY TBL.SORT
+    </select>
+
+    <!-- 패키지 강의 상세 조회 (선택 강좌) -->
+    <select id="packageLectureOnDetail2" parameterType="hashMap" resultType="hashMap">
+        SELECT TBL.*
+        FROM (
+            SELECT A.LECCODE, A.CATEGORY_CD, A.LEARNING_CD, A.LEC_TYPE_CHOICE, A.SUBJECT_TEACHER, A.SUBJECT_SJT_CD, A.SUBJECT_TITLE,
+                (SELECT NAME FROM TB_LEARNING_FORM_INFO WHERE CODE = A.LEARNING_CD) LEARNING_NM,
+                (SELECT SUBJECT_NM FROM TB_SUBJECT_INFO WHERE SUBJECT_CD = A.SUBJECT_SJT_CD) AS SUBJECT_NM,
+                (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = A.SUBJECT_TEACHER) AS SUBJECT_TEACHER_NM,
+                (SELECT PIC1 FROM TB_MA_MEMBER WHERE USER_ID = A.SUBJECT_TEACHER) AS SUBJECT_TEACHER_PIC1,
+                DATE_FORMAT(STR_TO_DATE(CONCAT(A.SUBJECT_OFF_OPEN_YEAR, A.SUBJECT_OFF_OPEN_MONTH, A.SUBJECT_OFF_OPEN_DAY), '%Y%m%d'), '%Y-%m-%d') START_DATE,
+                DATE_FORMAT(DATE_ADD(STR_TO_DATE(CONCAT(A.SUBJECT_OFF_OPEN_YEAR, A.SUBJECT_OFF_OPEN_MONTH, A.SUBJECT_OFF_OPEN_DAY), '%Y%m%d'), INTERVAL A.SUBJECT_PERIOD DAY), '%Y-%m-%d') END_DATE,
+                A.SUBJECT_PERIOD,
+                A.LEC_SCHEDULE,
+                A.LEC_COUNT,
+                IFNULL(A.MOV_ING, 'I') MOV_ING,
+                A.SUBJECT_PRICE,
+                A.MUST_PRF_IMG,
+                A.SEL_PRF_IMG,
+                <choose>
+                    <when test='discount != null and discount != ""'>
+                        (A.SUBJECT_MOVIE * ((100 - CAST(#{discount} AS DECIMAL)) / 100)) SUBJECT_MOVIE,
+                        (A.SUBJECT_PMP * ((100 - CAST(#{discount} AS DECIMAL)) / 100)) SUBJECT_PMP,
+                        (A.SUBJECT_MOVIE_PMP * ((100 - CAST(#{discount} AS DECIMAL)) / 100)) SUBJECT_MOVIE_PMP,
+                    </when>
+                    <otherwise>
+                        A.SUBJECT_MOVIE,
+                        A.SUBJECT_PMP,
+                        A.SUBJECT_MOVIE_PMP,
+                    </otherwise>
+                </choose>
+                A.SUBJECT_MOVIE_MP4, A.SUBJECT_MOVIE_VOD_MP4,
+                A.SUBJECT_DISCOUNT,
+                B.LECCODE PLECCODE,
+                B.SORT,
+                B.GUBUN
+            FROM TB_LEC_MST A
+            INNER JOIN TB_LEC_JONG B ON A.LECCODE = B.MST_LECCODE
+        ) TBL
+        WHERE TBL.PLECCODE = #{LECCODE} AND GUBUN = 2
+        ORDER BY TBL.SUBJECT_TEACHER, TBL.SUBJECT_SJT_CD, TBL.CATEGORY_CD, TBL.GUBUN, TBL.SORT
+    </select>
+
+    <!-- 오프라인 패키지 강의 목록 조회 -->
+    <select id="packageLecturePassList" parameterType="hashMap" resultType="hashMap">
+        SELECT A.LECCODE, A.CATEGORY_CD, A.LEARNING_CD, A.LEC_TYPE_CHOICE, A.SUBJECT_ISUSE, A.SUBJECT_TITLE, A.SUBJECT_DESC,
+            A.SUBJECT_TYPE, A.SUBJECT_GUBUN, A.SUBJECT_OPEN_DATE, SUBJECT_PRICE, A.SUBJECT_REAL_PRICE,
+            (SELECT NAME FROM TB_LEARNING_FORM_INFO WHERE CODE = A.LEARNING_CD) LEARNING_NM,
+            (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = A.SUBJECT_TEACHER) AS SUBJECT_TEACHER_NM
+        FROM TB_OFF_LEC_MST A
+        WHERE A.SUBJECT_ISUSE = 'Y'
+        AND A.LEC_TYPE_CHOICE = 'P'
+        AND (A.SUBJECT_PRICE &lt;&gt; 0 OR A.SUBJECT_PRICE IS NULL)
+        <if test='CATEGORY_CD != null and CATEGORY_CD != ""'>
+            AND A.CATEGORY_CD = #{CATEGORY_CD}
+        </if>
+        ORDER BY A.SEQ DESC
+    </select>
+
+    <!-- 오프라인 패키지 강의 상세 조회 -->
+    <select id="packageLectureOffDetail" parameterType="hashMap" resultType="hashMap">
+        SELECT TBL.*
+        FROM (
+            SELECT
+                A.SEQ, A.LECCODE, CATEGORY_CD, LEARNING_CD, SUBJECT_TYPE, SUBJECT_GUBUN,
+                SUBJECT_MEMBER_CNT, SUBJECT_TEACHER, SUBJECT_TEACHER_PAYMENT,
+                SUBJECT_SJT_CD, SUBJECT_TITLE, SUBJECT_DESC, SUBJECT_KEYWORD,
+                SUBJECT_OPEN_DATE, LEC_SCHEDULE,
+                WEEK1, WEEK2, WEEK3, WEEK4, WEEK5, WEEK6, WEEK7,
+                SUBJECT_DISCOUNT, SUBJECT_PRICE, SUBJECT_REAL_PRICE, SUBJECT_SUMNAIL, SUBJECT_ISUSE,
+                LEC_TYPE_CHOICE, LEC_GUBUN,
+                SUBJECT_TEACHER_MOVIE_PAYMENT, PLAN, REC_GUBUN,
+                (SELECT NAME FROM TB_LEARNING_FORM_INFO WHERE CODE = A.LEARNING_CD) LEARNING_NM,
+                (SELECT SUBJECT_NM FROM TB_SUBJECT_INFO WHERE SUBJECT_CD = A.SUBJECT_SJT_CD) AS SUBJECT_NM,
+                (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = A.SUBJECT_TEACHER) AS SUBJECT_TEACHER_NM,
+                (SELECT PRF_ONPIC2 FROM TB_MA_MEMBER WHERE USER_ID = A.SUBJECT_TEACHER) AS SUBJECT_TEACHER_PIC1,
+                B.LECCODE PLECCODE, B.SORT, B.GUBUN
+            FROM TB_OFF_LEC_MST A
+            INNER JOIN TB_OFF_LEC_JONG B ON A.LECCODE = B.MST_LECCODE
+        ) TBL
+        WHERE TBL.PLECCODE = #{LECCODE} AND GUBUN = 1
+        ORDER BY TBL.SEQ
+    </select>
+
+    <!-- 오프라인 패키지 강의 상세 정보 조회 -->
+    <select id="lectureOffDetailS" parameterType="hashMap" resultType="hashMap">
+        SELECT
+            SEQ, LECCODE, CATEGORY_CD, LEARNING_CD, SUBJECT_TYPE, SUBJECT_GUBUN,
+            SUBJECT_MEMBER_CNT, SUBJECT_TEACHER, SUBJECT_TEACHER_PAYMENT,
+            SUBJECT_SJT_CD, SUBJECT_TITLE, SUBJECT_DESC, SUBJECT_KEYWORD,
+            SUBJECT_OPEN_DATE, LEC_SCHEDULE,
+            WEEK1, WEEK2, WEEK3, WEEK4, WEEK5, WEEK6, WEEK7,
+            SUBJECT_DISCOUNT, SUBJECT_PRICE, SUBJECT_REAL_PRICE, SUBJECT_SUMNAIL, SUBJECT_ISUSE,
+            LEC_TYPE_CHOICE, LEC_GUBUN,
+            REG_DT, REG_ID, UPD_DT, UPD_ID,
+            SUBJECT_TEACHER_MOVIE_PAYMENT, PLAN, REC_GUBUN
+        FROM TB_OFF_LEC_MST
+        WHERE LECCODE = #{LECCODE}
+    </select>
+
+</mapper>

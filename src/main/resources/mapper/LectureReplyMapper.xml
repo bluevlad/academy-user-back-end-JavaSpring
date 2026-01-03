@@ -1,0 +1,328 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.academy.mapper.LectureReplyMapper">
+
+    <!-- 수강후기 목록 조회 -->
+    <select id="lectureReplyList" parameterType="hashMap" resultType="hashMap">
+        SELECT * FROM (
+            SELECT C.*, @rownum := @rownum + 1 AS rnum
+            FROM (
+                SELECT * FROM (
+                    SELECT
+                        (SELECT SUBJECT_NM FROM TB_SUBJECT_INFO WHERE SUBJECT_CD = a.SUBJECT_SJT_CD) AS LEC_SUBJECT_NM,
+                        c.USER_NM AS LEC_SUBJECT_TEACHER_NM,
+                        a.CATEGORY_CD, a.LEARNING_CD, a.LEC_TYPE_CHOICE,
+                        a.SUBJECT_SJT_CD,
+                        a.SUBJECT_TITLE,
+                        b.LECCODE,
+                        b.SEQ,
+                        b.USER_ID,
+                        CONCAT(LEFT(b.USER_NAME, CHAR_LENGTH(b.USER_NAME)-1), '*') AS USER_NAME,
+                        CASE WHEN b.TITLE IS NULL OR b.TITLE = ''
+                            THEN CASE WHEN CHAR_LENGTH(b.CONTENT) &lt;= 30 THEN b.CONTENT ELSE CONCAT(LEFT(b.CONTENT, 30), '...') END
+                            ELSE b.TITLE
+                        END AS TITLE,
+                        b.CONTENT,
+                        b.CHOICE_POINT,
+                        DATE_FORMAT(b.REG_DT, '%Y-%m-%d') REG_DT,
+                        b.REG_DT ORG_DT,
+                        c.PRF_ONPIC1, c.PRF_ONPIC2, c.PRF_ONPIC3,
+                        c.PRF_OFFPIC1, c.PRF_OFFPIC2, c.PRF_OFFPIC3,
+                        c.PIC1, c.PIC2, c.PIC3, c.PIC4, c.PIC5, c.PIC6, c.PIC7, c.PIC8,
+                        c.OFF_PIC1, c.OFF_PIC2, c.OFF_PIC3, c.OFF_PIC4, c.OFF_PIC5, c.OFF_PIC6, c.OFF_PIC7, c.OFF_PIC8
+                    FROM TB_LEC_MST a, TB_COMMENT b, TB_MA_MEMBER c
+                    WHERE a.LECCODE = b.LECCODE
+                    <choose>
+                        <when test="topMenu != null and topMenu != '' and topMenu != 'MAIN'">
+                            <if test='ISSUBMAIN != null and ISSUBMAIN != "" and ISSUBMAIN == "SUB"'>
+                                AND b.CHOICE_POINT = 5
+                                AND a.LEC_TYPE_CHOICE &lt;&gt; 'F'
+                            </if>
+                        </when>
+                        <when test='topMenu != null and topMenu != "" and topMenu == "MAIN"'>
+                            AND b.CHOICE_POINT = 5
+                            AND a.LEC_TYPE_CHOICE &lt;&gt; 'F'
+                            AND CHAR_LENGTH(CONCAT((SELECT SUBJECT_NM FROM TB_SUBJECT_INFO WHERE SUBJECT_CD = A.SUBJECT_SJT_CD), C.USER_NM)) &lt; 10
+                        </when>
+                    </choose>
+                    <if test="SUBJECT_TEACHER != null and SUBJECT_TEACHER != ''">
+                        AND a.SUBJECT_TEACHER = #{SUBJECT_TEACHER}
+                    </if>
+                    AND a.SUBJECT_TEACHER = c.USER_ID
+                    AND a.SUBJECT_ISUSE = 'Y'
+                    ORDER BY b.REG_DT DESC
+                ) AA
+                WHERE 1=1
+                <if test="SEARCHSUBJECT != null and SEARCHSUBJECT != ''">
+                    AND AA.SUBJECT_SJT_CD = #{SEARCHSUBJECT}
+                </if>
+                <if test="SEARCHTEAC != null and SEARCHTEAC != ''">
+                    AND AA.LEC_SUBJECT_TEACHER_NM = #{SEARCHTEAC}
+                </if>
+                <if test="SEARCHTEXT != null and SEARCHTEXT != ''">
+                    <choose>
+                        <when test='SEARCHKIND == "SEARCHTITLE"'>
+                            AND AA.TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                        </when>
+                        <when test='SEARCHKIND == "SEARCHSBJCT"'>
+                            AND AA.LEC_SUBJECT_NM LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                        </when>
+                        <when test='SEARCHKIND == "SEARCHTEACH"'>
+                            AND AA.LEC_SUBJECT_TEACHER_NM LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                        </when>
+                        <when test='SEARCHKIND == "SEARCHLECNM"'>
+                            AND AA.SUBJECT_TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                        </when>
+                        <otherwise>
+                            AND (AA.TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                                OR AA.LEC_SUBJECT_NM LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                                OR AA.LEC_SUBJECT_TEACHER_NM LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                                OR AA.SUBJECT_TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%'))
+                        </otherwise>
+                    </choose>
+                </if>
+                ORDER BY ORG_DT DESC
+            ) C, (SELECT @rownum := 0) r
+        ) T
+        WHERE rnum &gt; #{startNo} AND rnum &lt;= #{endNo}
+    </select>
+
+    <!-- 수강후기 목록 건수 조회 -->
+    <select id="lectureReplyListCount" parameterType="hashMap" resultType="int">
+        SELECT COUNT(*) CNT
+        FROM (
+            SELECT
+                (SELECT SUBJECT_NM FROM TB_SUBJECT_INFO WHERE SUBJECT_CD = a.SUBJECT_SJT_CD) AS LEC_SUBJECT_NM,
+                c.USER_NM AS LEC_SUBJECT_TEACHER_NM,
+                a.SUBJECT_SJT_CD,
+                a.SUBJECT_TITLE,
+                b.LECCODE,
+                b.SEQ,
+                b.USER_ID,
+                CONCAT(LEFT(b.USER_NAME, CHAR_LENGTH(b.USER_NAME)-1), '*') AS USER_NAME,
+                b.TITLE,
+                b.CONTENT,
+                b.CHOICE_POINT,
+                DATE_FORMAT(b.REG_DT, '%Y-%m-%d %H:%i:%s') REG_DT
+            FROM TB_LEC_MST a, TB_COMMENT b, TB_MA_MEMBER c
+            WHERE a.LECCODE = b.LECCODE
+            <choose>
+                <when test="topMenu != null and topMenu != '' and topMenu != 'MAIN'">
+                    <if test='ISSUBMAIN != null and ISSUBMAIN != "" and ISSUBMAIN == "SUB"'>
+                        AND b.CHOICE_POINT = 5
+                        AND a.LEC_TYPE_CHOICE &lt;&gt; 'F'
+                    </if>
+                </when>
+                <when test='topMenu != null and topMenu != "" and topMenu == "MAIN"'>
+                    AND b.CHOICE_POINT = 5
+                    AND a.LEC_TYPE_CHOICE &lt;&gt; 'F'
+                    AND CHAR_LENGTH(CONCAT((SELECT SUBJECT_NM FROM TB_SUBJECT_INFO WHERE SUBJECT_CD = A.SUBJECT_SJT_CD), C.USER_NM)) &lt; 10
+                </when>
+            </choose>
+            <if test="SUBJECT_TEACHER != null and SUBJECT_TEACHER != ''">
+                AND a.SUBJECT_TEACHER = #{SUBJECT_TEACHER}
+            </if>
+            AND a.SUBJECT_TEACHER = c.USER_ID
+            AND a.SUBJECT_ISUSE = 'Y'
+        ) AA
+        WHERE 1=1
+        <if test="SEARCHSUBJECT != null and SEARCHSUBJECT != ''">
+            AND AA.SUBJECT_SJT_CD = #{SEARCHSUBJECT}
+        </if>
+        <if test="SEARCHTEAC != null and SEARCHTEAC != ''">
+            AND AA.LEC_SUBJECT_TEACHER_NM = #{SEARCHTEAC}
+        </if>
+        <if test="SEARCHTEXT != null and SEARCHTEXT != ''">
+            <choose>
+                <when test='SEARCHKIND == "SEARCHTITLE"'>
+                    AND AA.TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                </when>
+                <when test='SEARCHKIND == "SEARCHSBJCT"'>
+                    AND AA.LEC_SUBJECT_NM LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                </when>
+                <when test='SEARCHKIND == "SEARCHTEACH"'>
+                    AND AA.LEC_SUBJECT_TEACHER_NM LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                </when>
+                <when test='SEARCHKIND == "SEARCHLECNM"'>
+                    AND AA.SUBJECT_TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                </when>
+                <otherwise>
+                    AND (AA.TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                        OR AA.LEC_SUBJECT_NM LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                        OR AA.LEC_SUBJECT_TEACHER_NM LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                        OR AA.SUBJECT_TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%'))
+                </otherwise>
+            </choose>
+        </if>
+    </select>
+
+    <!-- 수강후기 상세 목록 조회 -->
+    <select id="detailReplyList" parameterType="hashMap" resultType="hashMap">
+        SELECT * FROM (
+            SELECT C.*, @rownum := @rownum + 1 AS rnum
+            FROM (
+                SELECT
+                    A.SUBJECT_TITLE,
+                    CASE WHEN B.TITLE IS NULL OR B.TITLE = ''
+                        THEN CASE WHEN CHAR_LENGTH(B.CONTENT) &lt;= 30 THEN B.CONTENT ELSE CONCAT(LEFT(B.CONTENT, 30), '...') END
+                        ELSE B.TITLE
+                    END AS TITLE,
+                    A.CATEGORY_CD, A.LEARNING_CD, A.LEC_TYPE_CHOICE,
+                    A.SUBJECT_SJT_CD,
+                    B.LECCODE,
+                    B.SEQ,
+                    CONCAT(LEFT(B.USER_NAME, CHAR_LENGTH(B.USER_NAME)-1), '*') AS USER_NAME,
+                    B.USER_ID,
+                    B.USER_NAME AS USER_NAME_ORI,
+                    B.CONTENT,
+                    B.CHOICE_POINT,
+                    (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = A.SUBJECT_TEACHER) TEACHER_NM,
+                    DATE_FORMAT(B.REG_DT, '%Y-%m-%d') REG_DT
+                FROM TB_LEC_MST A, TB_COMMENT B
+                WHERE A.LECCODE = B.LECCODE
+                AND (A.LEC_TYPE_CHOICE = 'D' OR A.LEC_TYPE_CHOICE = 'F')
+                AND B.LECCODE IN (
+                    SELECT B.LECCODE
+                    FROM TB_LEC_BRIDGE A, TB_LEC_MST B
+                    WHERE A.LECCODE = B.LECCODE
+                    AND B.SUBJECT_ISUSE = 'Y'
+                    AND BRIDGE_LECCODE = (
+                        SELECT BRIDGE_LECCODE FROM TB_LEC_BRIDGE WHERE LECCODE = #{LECCODE}
+                    )
+                )
+                AND A.SUBJECT_ISUSE = 'Y'
+                <if test="SEARCHTEXT != null and SEARCHTEXT != ''">
+                    AND (CONTENT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                        OR B.TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                        OR B.USER_NAME LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                        OR A.SUBJECT_TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%'))
+                </if>
+                ORDER BY B.REG_DT DESC
+            ) C, (SELECT @rownum := 0) r
+        ) T
+        WHERE rnum &gt; #{startNo} AND rnum &lt;= #{endNo}
+    </select>
+
+    <!-- 수강후기 상세 목록 건수 조회 -->
+    <select id="detailReplyListCount" parameterType="hashMap" resultType="int">
+        SELECT COUNT(*) CNT
+        FROM TB_LEC_MST A, TB_COMMENT B
+        WHERE A.LECCODE = B.LECCODE
+        AND (A.LEC_TYPE_CHOICE = 'D' OR A.LEC_TYPE_CHOICE = 'F')
+        AND B.LECCODE IN (
+            SELECT B.LECCODE
+            FROM TB_LEC_BRIDGE A, TB_LEC_MST B
+            WHERE A.LECCODE = B.LECCODE
+            AND B.SUBJECT_ISUSE = 'Y'
+            AND BRIDGE_LECCODE = (
+                SELECT BRIDGE_LECCODE FROM TB_LEC_BRIDGE WHERE LECCODE = #{LECCODE}
+            )
+        )
+        AND A.SUBJECT_ISUSE = 'Y'
+        <if test="SEARCHTEXT != null and SEARCHTEXT != ''">
+            AND (CONTENT LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                OR B.TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                OR B.USER_NAME LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+                OR A.SUBJECT_TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%'))
+        </if>
+    </select>
+
+    <!-- 수강후기 작성 가능 여부 체크 -->
+    <select id="lectureIsReply" parameterType="hashMap" resultType="int">
+        SELECT COUNT(*) CNT
+        FROM TB_MYLECTURE
+        WHERE USERID = #{USER_ID}
+        AND LECTURE_NO = #{LECCODE}
+    </select>
+
+    <!-- 과목 목록 조회 -->
+    <select id="getSubjectList" parameterType="hashMap" resultType="hashMap">
+        SELECT *
+        FROM (
+            SELECT B.SUBJECT_CD, C.SUBJECT_NM, MIN(A.SEQ) SEQ
+            FROM TB_MA_MEMBER_CATEGORY A
+            INNER JOIN TB_MA_MEMBER_SUBJECT B ON A.USER_ID = B.USER_ID
+            INNER JOIN TB_SUBJECT_INFO C ON B.SUBJECT_CD = C.SUBJECT_CD
+            INNER JOIN TB_LEC_MST D ON C.SUBJECT_CD = D.SUBJECT_SJT_CD
+            WHERE D.LEC_TYPE_CHOICE = 'D'
+            AND A.CATEGORY_CODE = #{topMenu}
+            AND C.ISUSE = 'Y'
+            AND D.SUBJECT_ISUSE = 'Y'
+            GROUP BY B.SUBJECT_CD, C.SUBJECT_NM
+        ) T
+        ORDER BY SUBJECT_CD, SEQ
+    </select>
+
+    <!-- 수강후기 등록 -->
+    <insert id="insertReply" parameterType="hashMap">
+        INSERT INTO TB_COMMENT (
+            SEQ,
+            LECCODE,
+            USER_ID,
+            USER_NAME,
+            TITLE,
+            CONTENT,
+            CHOICE_POINT,
+            REG_DT
+        ) VALUES (
+            (SELECT IFNULL(MAX(CAST(SEQ AS UNSIGNED)), 0) + 1 FROM TB_COMMENT T),
+            #{LECCODE},
+            #{USER_ID},
+            #{USER_NM},
+            #{TITLE},
+            #{CONTENT},
+            #{CHOICE_POINT},
+            NOW()
+        )
+    </insert>
+
+    <!-- 수강후기 삭제 -->
+    <delete id="replyDelete" parameterType="hashMap">
+        DELETE FROM TB_COMMENT
+        WHERE LECCODE = #{DELETE_LECCODE}
+        AND SEQ = #{DELETE_SEQ}
+        AND USER_ID = #{USER_ID}
+    </delete>
+
+    <!-- 메인 수강후기 목록 조회 -->
+    <select id="lectureReplyMainList" parameterType="hashMap" resultType="hashMap">
+        SELECT * FROM (
+            SELECT
+                DISTINCT AA.RNK, AA.LEC_SUBJECT_NM, AA.CATEGORY_CD, AA.LEARNING_CD, AA.LEC_TYPE_CHOICE,
+                AA.SUBJECT_SJT_CD, AA.LEC_SUBJECT_TEACHER_NM, AA.LECCODE, AA.USER_NAME, AA.TITLE, AA.CHOICE_POINT, AA.REG_DT, AA.PRF_ONPIC2
+            FROM (
+                SELECT
+                    ROW_NUMBER() OVER (PARTITION BY USER_NAME ORDER BY B.REG_DT DESC, USER_NAME DESC) AS RNK,
+                    (SELECT SUBJECT_NM FROM TB_SUBJECT_INFO WHERE SUBJECT_CD = A.SUBJECT_SJT_CD) AS LEC_SUBJECT_NM,
+                    C.USER_NM AS LEC_SUBJECT_TEACHER_NM,
+                    A.CATEGORY_CD, A.LEARNING_CD, A.LEC_TYPE_CHOICE,
+                    A.SUBJECT_SJT_CD,
+                    B.LECCODE,
+                    CONCAT(LEFT(B.USER_NAME, CHAR_LENGTH(B.USER_NAME)-1), '*') AS USER_NAME,
+                    CASE WHEN B.TITLE IS NULL OR B.TITLE = ''
+                        THEN CASE WHEN CHAR_LENGTH(B.CONTENT) &lt;= 30 THEN B.CONTENT ELSE CONCAT(LEFT(B.CONTENT, 30), '...') END
+                        ELSE B.TITLE
+                    END AS TITLE,
+                    B.CHOICE_POINT,
+                    DATE_FORMAT(B.REG_DT, '%Y-%m-%d.%H:%i:%s') REG_DT,
+                    C.PRF_ONPIC2
+                FROM TB_LEC_MST A, TB_COMMENT B, TB_MA_MEMBER C
+                WHERE A.LECCODE = B.LECCODE
+                AND B.CHOICE_POINT = 5
+                AND A.LEC_TYPE_CHOICE &lt;&gt; 'F'
+                AND CHAR_LENGTH(CONCAT((SELECT SUBJECT_NM FROM TB_SUBJECT_INFO WHERE SUBJECT_CD = A.SUBJECT_SJT_CD), C.USER_NM)) &lt;= 10
+                AND A.SUBJECT_TEACHER = C.USER_ID
+                AND C.USER_ID NOT IN ('wgt151')
+                AND A.SUBJECT_ISUSE = 'Y'
+                <if test="topMenu != null and topMenu != '' and topMenu != 'MAIN'">
+                    AND A.CATEGORY_CD = #{topMenu}
+                </if>
+                ORDER BY B.REG_DT DESC
+            ) AA
+            WHERE RNK = 1
+            ORDER BY REG_DT DESC
+        ) BB
+        LIMIT #{endNo}
+    </select>
+
+</mapper>
