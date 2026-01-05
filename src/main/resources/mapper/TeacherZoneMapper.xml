@@ -1,0 +1,621 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.academy.mapper.TeacherZoneMapper">
+
+    <!-- 로그인 IP 이력 조회 -->
+    <select id="loginIp" parameterType="hashMap" resultType="hashMap">
+        SELECT ACCESS_DT, USER_IP, CNT
+        FROM (
+              SELECT ACCESS_DT, USER_IP,
+                     ROW_NUMBER() OVER(PARTITION BY LOWER(USERID) ORDER BY ACCESS_DT DESC) AS RNK,
+                     (SELECT COUNT(USER_IP) CNT FROM MB_ACCESS_LOG
+                      WHERE DATE_FORMAT(ACCESS_DT, '%Y%m%d') = DATE_FORMAT(NOW(), '%Y%m%d')
+                      AND LOWER(USERID) = LOWER(#{USER_ID})) AS CNT
+              FROM MB_ACCESS_LOG
+              WHERE LOWER(USERID) = LOWER(#{USER_ID})
+              ) AA
+        WHERE AA.RNK <![CDATA[ <= ]]> #{LOG_CNT}
+    </select>
+
+    <!-- 교수 과목 목록 조회 -->
+    <select id="getTeacherSubject" parameterType="hashMap" resultType="hashMap">
+        SELECT A.SUBJECT_CD, SUBJECT_NM
+        FROM TB_SUBJECT_INFO A, TB_MA_MEMBER_SUBJECT B
+        WHERE A.SUBJECT_CD = B.SUBJECT_CD
+        AND B.USER_ID = #{searchUserId}
+        GROUP BY A.SUBJECT_CD, SUBJECT_NM
+    </select>
+
+    <!-- 오프라인 강의 수강 인원 통계 -->
+    <select id="offLectureSum" parameterType="hashMap" resultType="hashMap">
+        SELECT OO.PTYPE, IFNULL(FF.CNT, 0) AS CNT
+        FROM
+              (SELECT CASE WHEN LEC_TYPE_CHOICE = 'D' THEN 'D' ELSE 'N' END AS PTYPE
+               FROM TB_OFF_LEC_MST GROUP BY CASE WHEN LEC_TYPE_CHOICE = 'D' THEN 'D' ELSE 'N' END) OO
+        LEFT JOIN
+            (
+            SELECT CASE WHEN ZZ.PTYPE = 'D' THEN 'D' ELSE 'N' END AS PTYPE, SUM(CNT) AS CNT
+            FROM
+                   (SELECT A.LECCODE,
+                             MIN(B.LEC_DATE) AS MIN_DATE, MAX(B.LEC_DATE) AS MAX_DATE
+                    FROM TB_OFF_LEC_MST A, TB_OFF_LECTURE_DATE B
+                    WHERE A.SUBJECT_TEACHER = #{searchUserId}
+                    AND A.LECCODE = B.LECCODE
+                    GROUP BY A.LECCODE
+                    UNION ALL
+                    SELECT B.LECCODE,
+                              MIN(C.LEC_DATE) AS MIN_DATE, MAX(C.LEC_DATE) AS MAX_DATE
+                    FROM TB_OFF_LEC_MST A, TB_OFF_LEC_JONG B, TB_OFF_LECTURE_DATE C
+                    WHERE A.SUBJECT_TEACHER = #{searchUserId}
+                    AND A.LECCODE = B.MST_LECCODE
+                    AND B.MST_LECCODE = C.LECCODE
+                    GROUP BY B.LECCODE) YY,
+                   (SELECT AA.MGNTNO, AA.PTYPE, COUNT(AA.ORDERNO) AS CNT
+                    FROM TB_OFF_ORDER_MGNT_NO AA,
+                            (SELECT B.ORDERNO, B.MGNTNO
+                             FROM TB_OFF_ORDERS A, TB_OFF_ORDER_MGNT_NO B
+                             WHERE A.ORDERNO = B.ORDERNO
+                             AND B.STATUSCODE IN ('DLV105','DLV230')
+                             GROUP BY B.ORDERNO, B.MGNTNO
+                             HAVING COUNT(*) = 1) BB
+                     WHERE AA.ORDERNO = BB.ORDERNO
+                     AND AA.MGNTNO = BB.MGNTNO
+                     AND AA.STATUSCODE = 'DLV105'
+                     GROUP BY AA.MGNTNO, AA.PTYPE) ZZ
+            WHERE YY.LECCODE = ZZ.MGNTNO
+            AND DATE_FORMAT(YY.MIN_DATE, '%Y%m') = DATE_FORMAT(NOW(), '%Y%m')
+            GROUP BY CASE WHEN ZZ.PTYPE = 'D' THEN 'D' ELSE 'N' END
+            ) FF ON OO.PTYPE = FF.PTYPE
+        ORDER BY OO.PTYPE DESC
+    </select>
+
+    <!-- 온라인 강의 수강 인원 통계 -->
+    <select id="onLectureSum" parameterType="hashMap" resultType="hashMap">
+        <![CDATA[
+        SELECT PTYPE, CNT
+        FROM (
+               SELECT B.PTYPE, COUNT(C.ORDERNO) AS CNT
+               FROM TB_ORDERS A, TB_ORDER_MGNT_NO B, TB_ORDER_YEARPACKAGE C
+               WHERE C.SUBJECT_TEACHER = #{searchUserId}
+               AND A.ORDERNO = B.ORDERNO
+               AND B.ORDERNO = C.ORDERNO
+               AND B.MGNTNO = C.PACKAGE_NO
+               AND B.STATUSCODE = 'DLV105'
+               AND B.PRICE  > 0
+               AND DATE_FORMAT(B.ISCONFIRM, '%Y%m') = DATE_FORMAT(NOW(), '%Y%m')
+               GROUP BY B.PTYPE
+               UNION ALL
+               SELECT 'N' AS PTYPE, IFNULL(SUM(ZZ.CNT), 0) AS CNT
+               FROM (SELECT TM.LECCODE
+                     FROM (SELECT B.LECCODE
+                           FROM TB_LEC_MST A, TB_LEC_JONG B
+                           WHERE A.SUBJECT_TEACHER = #{searchUserId}
+                           AND A.LECCODE = B.MST_LECCODE
+                           GROUP BY B.LECCODE) TJ, TB_LEC_MST TM
+                     WHERE TJ.LECCODE = TM.LECCODE
+                     AND TM.LEC_TYPE_CHOICE IN ('J', 'N', 'P')
+                     GROUP BY TM.LECCODE) YY
+               LEFT JOIN
+                    (SELECT AA.MGNTNO AS LECCODE, COUNT(AA.ORDERNO) AS CNT
+                     FROM TB_ORDER_MGNT_NO AA
+                     WHERE AA.STATUSCODE = 'DLV105'
+                     AND AA.PRICE > 0
+                     AND DATE_FORMAT(AA.ISCONFIRM, '%Y%m') = DATE_FORMAT(NOW(), '%Y%m')
+                     GROUP BY AA.MGNTNO) ZZ ON YY.LECCODE = ZZ.LECCODE
+               UNION ALL
+               SELECT 'D' AS PTYPE, IFNULL(SUM(CNT), 0) AS CNT
+               FROM (SELECT A.LECCODE
+                     FROM TB_LEC_MST A
+                     WHERE A.SUBJECT_TEACHER = #{searchUserId}
+                     AND A.LEC_TYPE_CHOICE ='D'
+                     GROUP BY A.LECCODE) YY
+               LEFT JOIN
+                    (SELECT AA.MGNTNO AS LECCODE, AA.PTYPE, COUNT(AA.ORDERNO) AS CNT
+                     FROM TB_ORDER_MGNT_NO AA
+                     WHERE AA.STATUSCODE = 'DLV105'
+                     AND AA.PRICE > 0
+                     AND DATE_FORMAT(AA.ISCONFIRM, '%Y%m') = DATE_FORMAT(NOW(), '%Y%m')
+                     GROUP BY AA.MGNTNO, AA.PTYPE) ZZ ON YY.LECCODE = ZZ.LECCODE
+            ) AS STATS
+        ORDER BY PTYPE DESC
+        ]]>
+    </select>
+
+    <!-- 오프라인 단과 강의 목록 -->
+    <select id="offLectureList" parameterType="hashMap" resultType="hashMap">
+        SELECT AA.LECCODE,
+                 AA.CATEGORY_CD, (SELECT NAME FROM TB_CATEGORY_INFO WHERE CODE = AA.CATEGORY_CD) AS CATEGORY_NM,
+                 AA.LEARNING_CD, CASE WHEN SUBSTRING(AA.LEARNING_CD, 4,2) = '01' THEN '이론강좌'
+                                      WHEN SUBSTRING(AA.LEARNING_CD, 4,2) = '02' THEN '문제풀이'
+                                      ELSE '특강' END AS LEC_NM,
+                 AA.SUBJECT_TITLE, AA.SUBJECT_REAL_PRICE,
+                 DATE_FORMAT(BB.MIN_DATE, '%Y-%m-%d') AS MIN_DATE, DATE_FORMAT(BB.MAX_DATE, '%Y-%m-%d') AS MAX_DATE,
+                 CC.ORD_CNT, CC.REF_CNT, CC.SUM_PRICE
+        FROM TB_OFF_LEC_MST AA,
+             (SELECT A.LECCODE,
+               MIN(B.LEC_DATE) AS MIN_DATE, MAX(B.LEC_DATE) AS MAX_DATE
+              FROM TB_OFF_LEC_MST A, TB_OFF_LECTURE_DATE B
+              WHERE A.SUBJECT_TEACHER = #{searchUserId}
+              AND A.LECCODE = B.LECCODE
+              GROUP BY A.LECCODE) BB,
+              (SELECT MGNTNO, SUM(ORD_CNT) AS ORD_CNT, SUM(REF_CNT) AS REF_CNT, SUM(SUM_PRICE) AS SUM_PRICE
+               FROM (SELECT B.MGNTNO, IFNULL(COUNT(USER_ID),0) AS ORD_CNT, 0 AS REF_CNT, SUM(B.PRICE) AS SUM_PRICE
+                     FROM TB_OFF_ORDERS A, TB_OFF_ORDER_MGNT_NO B
+                     WHERE A.ORDERNO = B.ORDERNO
+                     AND B.STATUSCODE IN ('DLV105')
+                     AND B.PTYPE = 'D'
+                     GROUP BY B.MGNTNO
+                     UNION ALL
+                     SELECT B.MGNTNO, 0 AS ORD_CNT, IFNULL(COUNT(USER_ID),0) AS REF_CNT, SUM(B.PRICE) AS SUM_PRICE
+                     FROM TB_OFF_ORDERS A, TB_OFF_ORDER_MGNT_NO B
+                     WHERE A.ORDERNO = B.ORDERNO
+                     AND B.STATUSCODE IN ('DLV230')
+                     AND B.PTYPE = 'D'
+                     GROUP BY B.MGNTNO) AS SUB
+               GROUP BY MGNTNO) CC
+        WHERE AA.LECCODE = BB.LECCODE
+        AND AA.LEC_TYPE_CHOICE = 'D'
+        AND AA.LECCODE = CC.MGNTNO
+        <if test="searchCategory != null and searchCategory != ''">
+        AND AA.CATEGORY_CD = #{searchCategory}
+        </if>
+        <if test="searchLearningCD != null and searchLearningCD != ''">
+        AND SUBSTRING(AA.LEARNING_CD, 4, 2) = #{searchLearningCD}
+        </if>
+        <if test="SEARCHTEXT != null and SEARCHTEXT != ''">
+        AND AA.SUBJECT_TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+        </if>
+        <if test="searchStartDate != null and searchStartDate != ''">
+        AND DATE_FORMAT(BB.MIN_DATE, '%Y%m%d') BETWEEN #{searchStartDate} AND #{searchEndDate}
+        </if>
+        ORDER BY BB.MIN_DATE DESC, AA.SUBJECT_TITLE
+        LIMIT #{recordCountPerPage} OFFSET #{firstIndex}
+    </select>
+
+    <!-- 오프라인 단과 강의 목록 카운트 -->
+    <select id="offLectureListCount" parameterType="hashMap" resultType="int">
+        SELECT  COUNT(*)
+        FROM TB_OFF_LEC_MST AA,
+             (SELECT A.LECCODE,
+               MIN(B.LEC_DATE) AS MIN_DATE, MAX(B.LEC_DATE) AS MAX_DATE
+              FROM TB_OFF_LEC_MST A, TB_OFF_LECTURE_DATE B
+              WHERE A.SUBJECT_TEACHER = #{searchUserId}
+              AND A.LECCODE = B.LECCODE
+              GROUP BY A.LECCODE) BB,
+              (SELECT MGNTNO, SUM(ORD_CNT) AS ORD_CNT, SUM(REF_CNT) AS REF_CNT
+               FROM (SELECT B.MGNTNO, IFNULL(COUNT(USER_ID),0) AS ORD_CNT, 0 AS REF_CNT
+                     FROM TB_OFF_ORDERS A, TB_OFF_ORDER_MGNT_NO B
+                     WHERE A.ORDERNO = B.ORDERNO
+                     AND B.STATUSCODE IN ('DLV105')
+                     AND B.PTYPE = 'D'
+                     GROUP BY B.MGNTNO
+                     UNION ALL
+                     SELECT B.MGNTNO, 0 AS ORD_CNT, IFNULL(COUNT(USER_ID),0) AS REF_CNT
+                     FROM TB_OFF_ORDERS A, TB_OFF_ORDER_MGNT_NO B
+                     WHERE A.ORDERNO = B.ORDERNO
+                     AND B.STATUSCODE IN ('DLV230')
+                     AND B.PTYPE = 'D'
+                     GROUP BY B.MGNTNO) AS SUB
+               GROUP BY MGNTNO) CC
+        WHERE AA.LECCODE = BB.LECCODE
+        AND AA.LEC_TYPE_CHOICE = 'D'
+        AND AA.LECCODE = CC.MGNTNO
+        <if test="searchCategory != null and searchCategory != ''">
+        AND AA.CATEGORY_CD = #{searchCategory}
+        </if>
+        <if test="searchLearningCD != null and searchLearningCD != ''">
+        AND SUBSTRING(AA.LEARNING_CD, 4, 2) = #{searchLearningCD}
+        </if>
+        <if test="SEARCHTEXT != null and SEARCHTEXT != ''">
+        AND AA.SUBJECT_TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+        </if>
+        <if test="searchStartDate != null and searchStartDate != ''">
+        AND DATE_FORMAT(BB.MIN_DATE, '%Y%m%d') BETWEEN #{searchStartDate} AND #{searchEndDate}
+        </if>
+    </select>
+
+    <!-- 오프라인 단과 강의 상세 -->
+    <select id="offLectureView" parameterType="hashMap" resultType="hashMap">
+         SELECT AA.LECCODE,
+                  AA.CATEGORY_CD, (SELECT NAME FROM TB_CATEGORY_INFO WHERE CODE = AA.CATEGORY_CD) AS CATEGORY_NM,
+                  AA.LEARNING_CD, CASE WHEN SUBSTRING(AA.LEARNING_CD, 4,2) = '01' THEN '이론강좌'
+                                       WHEN SUBSTRING(AA.LEARNING_CD, 4,2) = '02' THEN '문제풀이'
+                                       ELSE '특강' END AS LEC_NM,
+                  AA.SUBJECT_TITLE, AA.SUBJECT_REAL_PRICE,
+                  DATE_FORMAT(BB.MIN_DATE, '%Y-%m-%d') AS MIN_DATE, DATE_FORMAT(BB.MAX_DATE, '%Y-%m-%d') AS MAX_DATE,
+                  CC.ORD_CNT, CC.REF_CNT, CC.SUM_PRICE
+         FROM TB_OFF_LEC_MST AA,
+              (SELECT A.LECCODE,
+                MIN(B.LEC_DATE) AS MIN_DATE, MAX(B.LEC_DATE) AS MAX_DATE
+               FROM TB_OFF_LEC_MST A, TB_OFF_LECTURE_DATE B
+               WHERE A.SUBJECT_TEACHER = #{searchUserId}
+               AND A.LECCODE = B.LECCODE
+               GROUP BY A.LECCODE) BB
+         LEFT JOIN
+               (SELECT MGNTNO, SUM(ORD_CNT) AS ORD_CNT, SUM(REF_CNT) AS REF_CNT, SUM(SUM_PRICE) AS SUM_PRICE
+                FROM (SELECT B.MGNTNO, IFNULL(COUNT(USER_ID),0) AS ORD_CNT, 0 AS REF_CNT, SUM(B.PRICE) AS SUM_PRICE
+                      FROM TB_OFF_ORDERS A, TB_OFF_ORDER_MGNT_NO B
+                      WHERE A.ORDERNO = B.ORDERNO
+                      AND B.STATUSCODE IN ('DLV105')
+                      AND B.PTYPE = 'D'
+                      GROUP BY B.MGNTNO
+                      UNION ALL
+                      SELECT B.MGNTNO, 0 AS ORD_CNT, IFNULL(COUNT(USER_ID),0) AS REF_CNT, 0 AS SUM_PRICE
+                      FROM TB_OFF_ORDERS A, TB_OFF_ORDER_MGNT_NO B
+                      WHERE A.ORDERNO = B.ORDERNO
+                      AND B.STATUSCODE IN ('DLV230')
+                      AND B.PTYPE = 'D'
+                      GROUP BY B.MGNTNO) AS SUB
+                GROUP BY MGNTNO) CC ON AA.LECCODE = CC.MGNTNO
+         WHERE AA.LECCODE = BB.LECCODE
+         AND AA.LEC_TYPE_CHOICE = 'D'
+         AND AA.LECCODE = #{LECCODE}
+    </select>
+
+    <!-- 오프라인 단과 강의 수강생 목록 -->
+    <select id="offLectureStdList" parameterType="hashMap" resultType="hashMap">
+        SELECT CC.USER_ID, CC.USER_NM, CC.ORDERNO, BB.LECCODE, CC.ORDERNO, CC.ISCONFIRM, CC.PRICE,
+                 CC.ORDER_TYPE, CASE CC.ORDER_TYPE WHEN 'ON' THEN '온라인' WHEN 'OFF' THEN '학원방문신청' ELSE '데스크 접수' END AS ORDER_NM,
+                 CASE CC.STATUSCODE WHEN 'DLV105' THEN '결제완료' ELSE '환불완료' END AS STATUS_NM,
+                 (SELECT CODE_NM FROM TB_BA_CONFIG_CD WHERE SYS_CD ='PAYMENT_CODE' AND CODE_VAL = CC.PAYCODE) AS PAYCODENM
+        FROM
+             (SELECT A.LECCODE, A.SUBJECT_REAL_PRICE
+              FROM TB_OFF_LEC_MST A
+              WHERE A.SUBJECT_TEACHER = #{searchUserId}
+              AND A.LECCODE = #{LECCODE}) BB,
+             (SELECT A.ORDERNO, A.ORDER_TYPE, A.OFF_LINE, A.USER_ID, A.USER_NM,
+                     C.PACKAGE_NO, C.LECTURE_NO, B.ISCONFIRM, B.PRICE,
+                     E.PAYCODE, B.STATUSCODE
+              FROM TB_OFF_ORDERS A, TB_OFF_ORDER_MGNT_NO B, TB_OFF_MYLECTURE C, TB_OFF_APPROVALS E,
+              (SELECT O.ORDERNO, M.MGNTNO
+               FROM TB_OFF_ORDERS O, TB_OFF_ORDER_MGNT_NO M
+               WHERE O.ORDERNO = M.ORDERNO
+               AND M.STATUSCODE IN ('DLV105', 'DLV230')
+               AND M.PTYPE IN ('D')
+               GROUP BY O.ORDERNO, M.MGNTNO
+               HAVING COUNT(*) = 1) D
+              WHERE A.ORDERNO = B.ORDERNO
+              AND B.ORDERNO = C.ORDERNO
+              AND B.MGNTNO = C.PACKAGE_NO
+              AND A.ORDERNO = E.ORDERNO
+              AND B.ORDERNO = D.ORDERNO
+              AND B.MGNTNO = D.MGNTNO) CC
+        WHERE BB.LECCODE = CC.PACKAGE_NO
+        AND BB.LECCODE = CC.LECTURE_NO
+        <if test="searchViewStartDate != null and searchViewStartDate != ''">
+        AND DATE_FORMAT(CC.ISCONFIRM, '%Y%m%d') BETWEEN #{searchViewStartDate} AND #{searchViewEndDate}
+        </if>
+        <if test="searchUser != null and searchUser != ''">
+        AND (CC.USER_ID LIKE CONCAT('%', #{searchUser}, '%') OR CC.USER_NM LIKE CONCAT('%', #{searchUser}, '%'))
+        </if>
+        ORDER BY CC.ISCONFIRM
+    </select>
+
+    <!-- 온라인 단과 강의 목록 -->
+    <select id="onLectureList" parameterType="hashMap" resultType="hashMap">
+        SELECT AA.LECCODE,
+                 AA.CATEGORY_CD, (SELECT NAME FROM TB_CATEGORY_INFO WHERE CODE = AA.CATEGORY_CD) AS CATEGORY_NM,
+                 AA.LEARNING_CD, CASE WHEN SUBSTRING(AA.LEARNING_CD, 4,2) = '01' THEN '이론강좌'
+                                      WHEN SUBSTRING(AA.LEARNING_CD, 4,2) = '02' THEN '문제풀이'
+                                      ELSE '특강' END AS LEC_NM,
+                 AA.SUBJECT_SJT_CD, (SELECT SUBJECT_NM FROM TB_SUBJECT_INFO WHERE SUBJECT_CD = AA.SUBJECT_SJT_CD) AS SUBJECT_NM,
+                 AA.SUBJECT_TITLE, AA.SUBJECT_MOVIE, AA.SUBJECT_PERIOD,
+                CC.ORD_CNT, CC.REF_CNT, CC.ORD_SUM, CC.REF_SUM
+        FROM TB_LEC_MST AA,
+              (SELECT MGNTNO, SUM(ORD_CNT) AS ORD_CNT, SUM(REF_CNT) AS REF_CNT, SUM(ORD_SUM) AS ORD_SUM, SUM(REF_SUM) AS REF_SUM
+               FROM (SELECT B.MGNTNO, IFNULL(COUNT(USER_ID),0) AS ORD_CNT, 0 AS REF_CNT, SUM(B.PRICE) AS ORD_SUM, 0 AS REF_SUM
+                     FROM TB_ORDERS A, TB_ORDER_MGNT_NO B
+                     WHERE A.ORDERNO = B.ORDERNO
+                     AND B.STATUSCODE IN ('DLV105')
+                     AND B.PTYPE IN ('D')
+                     AND B.PRICE <![CDATA[ > ]]> 0
+                    <if test="searchStartDate != null and searchStartDate != ''">
+                    AND DATE_FORMAT(B.ISCONFIRM, '%Y%m%d') BETWEEN #{searchStartDate} AND #{searchEndDate}
+                    </if>
+                     GROUP BY B.MGNTNO
+                     UNION ALL
+                     SELECT B.MGNTNO, 0 AS ORD_CNT, IFNULL(COUNT(USER_ID),0) AS REF_CNT, 0 AS ORD_SUM, SUM(B.PRICE) AS REF_SUM
+                     FROM TB_ORDERS A, TB_ORDER_MGNT_NO B
+                     WHERE A.ORDERNO = B.ORDERNO
+                     AND B.STATUSCODE IN ('DLV230')
+                     AND B.PTYPE IN ('D')
+                     AND B.PRICE <![CDATA[ < ]]> 0
+                    <if test="searchStartDate != null and searchStartDate != ''">
+                    AND DATE_FORMAT(B.ISCONFIRM, '%Y%m%d') BETWEEN #{searchStartDate} AND #{searchEndDate}
+                    </if>
+                     GROUP BY B.MGNTNO) AS SUB
+               GROUP BY MGNTNO) CC
+        WHERE AA.SUBJECT_TEACHER = #{searchUserId}
+        AND AA.LECCODE = CC.MGNTNO
+        <if test="searchCategory != null and searchCategory != ''">
+        AND AA.CATEGORY_CD = #{searchCategory}
+        </if>
+        <if test="searchLearningCD != null and searchLearningCD != ''">
+        AND SUBSTRING(AA.LEARNING_CD, 4, 2) = #{searchLearningCD}
+        </if>
+        <if test="searchSubjectCD != null and searchSubjectCD != ''">
+        AND AA.SUBJECT_SJT_CD = #{searchSubjectCD}
+        </if>
+        <if test="SEARCHTEXT != null and SEARCHTEXT != ''">
+        AND AA.SUBJECT_TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+        </if>
+        ORDER BY AA.SUBJECT_TITLE, AA.CATEGORY_CD, AA.LEARNING_CD
+        LIMIT #{recordCountPerPage} OFFSET #{firstIndex}
+    </select>
+
+    <!-- 온라인 단과 강의 목록 카운트 -->
+    <select id="onLectureListCount" parameterType="hashMap" resultType="int">
+        SELECT  COUNT(*)
+        FROM TB_LEC_MST AA,
+              (SELECT MGNTNO, SUM(ORD_CNT) AS ORD_CNT, SUM(REF_CNT) AS REF_CNT
+               FROM (SELECT B.MGNTNO, IFNULL(COUNT(USER_ID),0) AS ORD_CNT, 0 AS REF_CNT
+                     FROM TB_ORDERS A, TB_ORDER_MGNT_NO B
+                     WHERE A.ORDERNO = B.ORDERNO
+                     AND B.STATUSCODE IN ('DLV105')
+                     AND B.PTYPE IN ('D')
+                     AND B.PRICE <![CDATA[ > ]]> 0
+                    <if test="searchStartDate != null and searchStartDate != ''">
+                    AND DATE_FORMAT(B.ISCONFIRM, '%Y%m%d') BETWEEN #{searchStartDate} AND #{searchEndDate}
+                    </if>
+                     GROUP BY B.MGNTNO
+                     UNION ALL
+                     SELECT B.MGNTNO, 0 AS ORD_CNT, IFNULL(COUNT(USER_ID),0) AS REF_CNT
+                     FROM TB_ORDERS A, TB_ORDER_MGNT_NO B
+                     WHERE A.ORDERNO = B.ORDERNO
+                     AND B.STATUSCODE IN ('DLV230')
+                     AND B.PTYPE IN ('D')
+                     AND B.PRICE <![CDATA[ < ]]> 0
+                    <if test="searchStartDate != null and searchStartDate != ''">
+                    AND DATE_FORMAT(B.ISCONFIRM, '%Y%m%d') BETWEEN #{searchStartDate} AND #{searchEndDate}
+                    </if>
+                     GROUP BY B.MGNTNO) AS SUB
+               GROUP BY MGNTNO) CC
+        WHERE AA.SUBJECT_TEACHER = #{searchUserId}
+        AND AA.LECCODE = CC.MGNTNO
+        <if test="searchCategory != null and searchCategory != ''">
+        AND AA.CATEGORY_CD = #{searchCategory}
+        </if>
+        <if test="searchLearningCD != null and searchLearningCD != ''">
+        AND SUBSTRING(AA.LEARNING_CD, 4, 2) = #{searchLearningCD}
+        </if>
+        <if test="searchSubjectCD != null and searchSubjectCD != ''">
+        AND AA.SUBJECT_SJT_CD = #{searchSubjectCD}
+        </if>
+        <if test="SEARCHTEXT != null and SEARCHTEXT != ''">
+        AND AA.SUBJECT_TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+        </if>
+    </select>
+
+    <!-- 온라인 강의 상세 -->
+    <select id="onLectureView" parameterType="hashMap" resultType="hashMap">
+        SELECT A.LECCODE,
+               A.CATEGORY_CD, (SELECT NAME FROM TB_CATEGORY_INFO WHERE CODE = A.CATEGORY_CD) AS CATEGORY_NM,
+               A.SUBJECT_TITLE, A.SUBJECT_MOVIE, A.SUBJECT_PERIOD
+        FROM TB_LEC_MST A
+        WHERE A.LECCODE = #{LECCODE}
+    </select>
+
+    <!-- 온라인 단과 강의 수강생 목록 -->
+    <select id="onLectureStdList" parameterType="hashMap" resultType="hashMap">
+        SELECT CC.USER_ID, CC.USER_NM, CC.ORDERNO, BB.LECCODE, CC.ORDERNO, CC.ISCONFIRM, CC.PRICE,
+                 CASE CC.STATUSCODE WHEN 'DLV105' THEN '결제완료' ELSE '환불완료' END AS STATUS_NM,
+                 (SELECT CODE_NM FROM TB_BA_CONFIG_CD WHERE SYS_CD ='PAYMENT_CODE' AND CODE_VAL = CC.PAYCODE) AS PAYCODENM
+        FROM
+             (SELECT A.LECCODE, A.SUBJECT_MOVIE
+              FROM TB_LEC_MST A
+              WHERE A.SUBJECT_TEACHER = #{searchUserId}
+              AND A.LECCODE = #{LECCODE}) BB,
+             (SELECT A.ORDERNO, A.USER_ID, A.USER_NM,
+                     C.PACKAGE_NO, C.LECTURE_NO, B.ISCONFIRM, B.PRICE,
+                     D.PAYCODE, B.STATUSCODE
+              FROM TB_ORDERS A, TB_ORDER_MGNT_NO B, TB_MYLECTURE C, TB_APPROVALS D
+              WHERE A.ORDERNO = B.ORDERNO
+              AND B.ORDERNO = C.ORDERNO
+              AND B.MGNTNO = C.PACKAGE_NO
+              AND A.ORDERNO = D.ORDERNO
+              AND B.STATUSCODE IN ('DLV105')
+              AND B.PRICE <![CDATA[ > ]]> 0
+             ) CC
+        WHERE BB.LECCODE = CC.PACKAGE_NO
+        AND BB.LECCODE = CC.LECTURE_NO
+        <if test="searchStartDate != null and searchStartDate != ''">
+        AND DATE_FORMAT(CC.ISCONFIRM, '%Y%m%d') BETWEEN #{searchStartDate} AND #{searchEndDate}
+        </if>
+        <if test="searchUser != null and searchUser != ''">
+        AND (CC.USER_ID LIKE CONCAT('%', #{searchUser}, '%') OR CC.USER_NM LIKE CONCAT('%', #{searchUser}, '%'))
+        </if>
+        ORDER BY CC.ISCONFIRM
+    </select>
+
+    <!-- 동영상 강의 목록 -->
+    <select id="movieLectureList" parameterType="hashMap" resultType="hashMap">
+        SELECT AA.LECCODE,
+                 AA.CATEGORY_CD, (SELECT NAME FROM TB_CATEGORY_INFO WHERE CODE = AA.CATEGORY_CD) AS CATEGORY_NM,
+                 AA.LEARNING_CD, CASE WHEN SUBSTRING(AA.LEARNING_CD, 4,2) = '01' THEN '이론강좌'
+                                      WHEN SUBSTRING(AA.LEARNING_CD, 4,2) = '02' THEN '문제풀이'
+                                      ELSE '특강' END AS LEC_NM,
+                 AA.SUBJECT_SJT_CD, BB.SUBJECT_NM,
+                 AA.SUBJECT_TITLE, AA.SUBJECT_PERIOD, AA.SUBJECT_ISUSE,
+                 AA.MOV_ING, CASE AA.MOV_ING WHEN 'C' THEN '업데이트 예정' WHEN 'I' THEN '업데이트 중' ELSE '업데이트 완료' END AS MOV_ING_NM,
+                 AA.LEC_COUNT, AA.LEC_SCHEDULE
+        FROM TB_LEC_MST AA, TB_SUBJECT_INFO BB
+        WHERE AA.SUBJECT_TEACHER = #{searchUserId}
+        AND AA.SUBJECT_SJT_CD = BB.SUBJECT_CD
+        <if test="searchCategory != null and searchCategory != ''">
+        AND AA.CATEGORY_CD = #{searchCategory}
+        </if>
+        <if test="searchLearningCD != null and searchLearningCD != ''">
+        AND SUBSTRING(AA.LEARNING_CD, 4, 2) = #{searchLearningCD}
+        </if>
+        <if test="SEARCHTEXT != null and SEARCHTEXT != ''">
+        AND AA.SUBJECT_TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+        </if>
+        <choose>
+            <when test='lMenuType == "1"'>
+        AND AA.LEC_TYPE_CHOICE = 'D'
+        AND SUBSTRING(AA.LEARNING_CD, 4, 2) = '01'
+            </when>
+            <when test='lMenuType == "2"'>
+        AND AA.LEC_TYPE_CHOICE = 'D'
+        AND SUBSTRING(AA.LEARNING_CD, 4, 2) = '02'
+            </when>
+            <when test='lMenuType == "3"'>
+        AND AA.LEC_TYPE_CHOICE = 'D'
+        AND SUBSTRING(AA.LEARNING_CD, 4, 2) = '03'
+            </when>
+            <when test='lMenuType == "4"'>
+        AND AA.LEC_TYPE_CHOICE = 'F'
+            </when>
+            <otherwise>
+        AND AA.LEC_TYPE_CHOICE = 'D'
+        AND SUBSTRING(AA.LEARNING_CD, 4, 2) = '01'
+            </otherwise>
+        </choose>
+        ORDER BY AA.SUBJECT_TITLE
+        LIMIT #{recordCountPerPage} OFFSET #{firstIndex}
+    </select>
+
+    <!-- 동영상 강의 목록 카운트 -->
+    <select id="movieLectureListCount" parameterType="hashMap" resultType="int">
+        SELECT  COUNT(*)
+        FROM TB_LEC_MST AA, TB_SUBJECT_INFO BB
+        WHERE AA.SUBJECT_TEACHER = #{searchUserId}
+        AND AA.SUBJECT_SJT_CD = BB.SUBJECT_CD
+        <if test="searchCategory != null and searchCategory != ''">
+        AND AA.CATEGORY_CD = #{searchCategory}
+        </if>
+        <if test="searchLearningCD != null and searchLearningCD != ''">
+        AND SUBSTRING(AA.LEARNING_CD, 4, 2) = #{searchLearningCD}
+        </if>
+        <if test="SEARCHTEXT != null and SEARCHTEXT != ''">
+        AND AA.SUBJECT_TITLE LIKE CONCAT('%', #{SEARCHTEXT}, '%')
+        </if>
+        <choose>
+            <when test='lMenuType == "1"'>
+        AND AA.LEC_TYPE_CHOICE = 'D'
+        AND SUBSTRING(AA.LEARNING_CD, 4, 2) = '01'
+            </when>
+            <when test='lMenuType == "2"'>
+        AND AA.LEC_TYPE_CHOICE = 'D'
+        AND SUBSTRING(AA.LEARNING_CD, 4, 2) = '02'
+            </when>
+            <when test='lMenuType == "3"'>
+        AND AA.LEC_TYPE_CHOICE = 'D'
+        AND SUBSTRING(AA.LEARNING_CD, 4, 2) = '03'
+            </when>
+            <when test='lMenuType == "4"'>
+        AND AA.LEC_TYPE_CHOICE = 'F'
+            </when>
+            <otherwise>
+        AND AA.LEC_TYPE_CHOICE = 'D'
+        AND SUBSTRING(AA.LEARNING_CD, 4, 2) = '01'
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 동영상 목록 -->
+    <select id="movieList" parameterType="hashMap" resultType="hashMap">
+        SELECT A.LECCODE, (SELECT NAME FROM TB_CATEGORY_INFO WHERE CODE = A.CATEGORY_CD) AS CATEGORY_NM,
+               B.BRIDGE_LECCODE,
+               C.MOVIE_NO, C.MOVIE_NAME, C.MOVIE_DATA_FILE_YN, C.MOVIE_DATA_FILENAME, C.MOVIE_TIME,
+               C.MP4_URL, C.WIDE_URL, C.MOVIE_FILENAME2, C.MOVIE_FILENAME3, C.MOVIE_FILENAME4,
+               (SELECT SUBJECT_OPTION FROM TB_LEC_MST WHERE LECCODE = #{LECCODE}) AS SUBJECT_OPTION,
+               (SELECT SUBJECT_MONITORMODE FROM TB_LEC_MST WHERE LECCODE = #{LECCODE}) AS SUBJECT_MONITORMODE
+        FROM TB_LEC_MST A, TB_LEC_BRIDGE B, TB_MOVIE C
+        WHERE A.LECCODE = #{LECCODE}
+        AND A.SUBJECT_TEACHER = #{searchUserId}
+        AND A.LECCODE = B.LECCODE
+        AND B.BRIDGE_LECCODE = C.LECCODE
+    </select>
+
+    <!-- 강의 상세 정보 -->
+    <select id="lectureView" parameterType="hashMap" resultType="hashMap">
+        SELECT A.LECCODE,
+                 A.CATEGORY_CD, (SELECT NAME FROM TB_CATEGORY_INFO WHERE CODE = A.CATEGORY_CD) AS CATEGORY_NM,
+                 A.LEARNING_CD, (SELECT NAME FROM TB_LEARNING_FORM_INFO WHERE CODE = A.LEARNING_CD) AS LEARNING_NM,
+                 A.SUBJECT_SJT_CD, (SELECT SUBJECT_NM FROM TB_SUBJECT_INFO WHERE SUBJECT_CD = A.SUBJECT_SJT_CD) AS SUBJECT_NM,
+                 A.SUBJECT_TEACHER, (SELECT USER_NM FROM TB_MA_MEMBER WHERE USER_ID = A.SUBJECT_TEACHER) AS SUBJECT_TEACHER_NM,
+                 A.SUBJECT_TITLE, A.SUBJECT_DESC, A.SUBJECT_MEMO,
+                 IFNULL(A.MOV_ING, 'I') AS MOV_ING,
+                 A.SUBJECT_PERIOD, A.LEC_SCHEDULE, A.LEC_COUNT, IFNULL(A.LEC_BAESU, '00') AS LEC_BAESU
+        FROM  TB_LEC_MST A
+        WHERE A.LECCODE = #{LECCODE}
+    </select>
+
+    <!-- 주문 통계 -->
+    <select id="onOrderStat" parameterType="hashMap" resultType="hashMap">
+        SELECT DT, PTYPE, CNT
+        FROM (
+               SELECT DATE_FORMAT(B.ISCONFIRM, '%Y%m') AS DT, B.PTYPE, COUNT(C.ORDERNO) AS CNT
+               FROM TB_ORDERS A, TB_ORDER_MGNT_NO B, TB_ORDER_YEARPACKAGE C,
+                   (SELECT B.ORDERNO, B.MGNTNO
+                    FROM TB_ORDERS A, TB_ORDER_MGNT_NO B
+                    WHERE A.ORDERNO = B.ORDERNO
+                    AND B.STATUSCODE IN ('DLV105','DLV230')
+                    GROUP BY B.ORDERNO, B.MGNTNO
+                    HAVING COUNT(*) = 1) D
+               WHERE C.SUBJECT_TEACHER = #{searchUserId}
+               AND A.ORDERNO = B.ORDERNO
+               AND B.ORDERNO = C.ORDERNO
+               AND B.MGNTNO = C.PACKAGE_NO
+               AND B.STATUSCODE = 'DLV105'
+               AND B.PRICE > 0
+               AND B.ORDERNO = D.ORDERNO
+               AND B.MGNTNO = D.MGNTNO
+               GROUP BY DATE_FORMAT(B.ISCONFIRM, '%Y%m'), B.PTYPE
+               UNION ALL
+               SELECT ZZ.DT, 'N' AS PTYPE, IFNULL(SUM(ZZ.CNT), 0) AS CNT
+               FROM (SELECT TM.LECCODE
+                     FROM (SELECT B.LECCODE
+                           FROM TB_LEC_MST A, TB_LEC_JONG B
+                           WHERE A.SUBJECT_TEACHER = #{searchUserId}
+                           AND A.LECCODE = B.MST_LECCODE
+                           GROUP BY B.LECCODE) TJ, TB_LEC_MST TM
+                     WHERE TJ.LECCODE = TM.LECCODE
+                     AND TM.LEC_TYPE_CHOICE IN ('J', 'N', 'P')
+                     GROUP BY TM.LECCODE) YY
+               LEFT JOIN
+                    (SELECT DATE_FORMAT(AA.ISCONFIRM, '%Y%m') AS DT, AA.MGNTNO AS LECCODE, COUNT(AA.ORDERNO) AS CNT
+                     FROM TB_ORDER_MGNT_NO AA,
+                         (SELECT B.ORDERNO, B.MGNTNO
+                          FROM TB_ORDERS A, TB_ORDER_MGNT_NO B
+                          WHERE A.ORDERNO = B.ORDERNO
+                          AND B.STATUSCODE IN ('DLV105','DLV230')
+                          GROUP BY B.ORDERNO, B.MGNTNO
+                          HAVING COUNT(*) = 1) BB
+                     WHERE AA.ORDERNO = BB.ORDERNO
+                     AND AA.MGNTNO = BB.MGNTNO
+                     AND AA.STATUSCODE = 'DLV105'
+                     AND AA.PRICE > 0
+                     GROUP BY DATE_FORMAT(AA.ISCONFIRM, '%Y%m'), AA.MGNTNO) ZZ ON YY.LECCODE = ZZ.LECCODE
+               GROUP BY ZZ.DT
+               UNION ALL
+               SELECT DT, 'D' AS PTYPE, IFNULL(SUM(CNT), 0) AS CNT
+               FROM (SELECT A.LECCODE
+                     FROM TB_LEC_MST A
+                     WHERE A.SUBJECT_TEACHER = #{searchUserId}
+                     AND A.LEC_TYPE_CHOICE ='D'
+                     GROUP BY A.LECCODE) YY
+               LEFT JOIN
+                    (SELECT DATE_FORMAT(AA.ISCONFIRM, '%Y%m') AS DT, AA.MGNTNO AS LECCODE, AA.PTYPE, COUNT(AA.ORDERNO) AS CNT
+                     FROM TB_ORDER_MGNT_NO AA,
+                         (SELECT B.ORDERNO, B.MGNTNO
+                          FROM TB_ORDERS A, TB_ORDER_MGNT_NO B
+                          WHERE A.ORDERNO = B.ORDERNO
+                          AND B.STATUSCODE IN ('DLV105','DLV230')
+                          GROUP BY B.ORDERNO, B.MGNTNO
+                          HAVING COUNT(*) = 1) BB
+                     WHERE AA.ORDERNO = BB.ORDERNO
+                     AND AA.MGNTNO = BB.MGNTNO
+                     AND AA.STATUSCODE = 'DLV105'
+                     AND AA.PRICE > 0
+                     GROUP BY DATE_FORMAT(AA.ISCONFIRM, '%Y%m'), AA.MGNTNO, AA.PTYPE) ZZ ON YY.LECCODE = ZZ.LECCODE
+               GROUP BY ZZ.DT
+            ) AS STATS
+        ORDER BY DT, PTYPE DESC
+    </select>
+
+    <!-- 추가 쿼리들은 필요시 구현 -->
+    <!-- offPkgLectureList, onYearLectureList, onPkgLectureList 등 -->
+
+</mapper>

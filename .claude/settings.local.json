@@ -6,7 +6,8 @@
       "Bash(cmd.exe /c \"dir C:\\jee-2025-09\\workspace\\willbesgosiWeb\\src\\com\\willbes\\web\\mocktest /S /B 2>nul\")",
       "Bash(dir \"C:\\jee-2025-09\\workspace\\willbesgosiWeb\\src\\com\\willbes\\web\\teacher\" /B)",
       "Bash(dir C:jee-2025-09workspacewillbesgosiWebsrcsqlmapmappersoracle /B)",
-      "Bash(cmd.exe /c \"dir C:\\jee-2025-09\\workspace\\willbesgosiWeb\\src\\sqlmap\\mappers\\oracle /B 2>nul | findstr /I teacher\")"
+      "Bash(cmd.exe /c \"dir C:\\jee-2025-09\\workspace\\willbesgosiWeb\\src\\sqlmap\\mappers\\oracle /B 2>nul | findstr /I teacher\")",
+      "Bash(cmd.exe /c \"dir C:\\jee-2025-09\\workspace\\willbesgosiWeb\\src\\com\\willbes\\web\\teacher /B 2>nul\")"
     ],
     "deny": [],
     "ask": []
