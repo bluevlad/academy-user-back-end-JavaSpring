@@ -2,8 +2,8 @@ package com.academy.mypage.pay;
 
 import com.academy.common.CORSFilter;
 import com.academy.common.PaginationInfo;
-import com.academy.mypage.pay.service.PayService;
-import com.academy.mypage.pay.service.PayVO;
+import com.academy.mypage.pay.service.MypagePayService;
+import com.academy.mypage.pay.service.MypagePayVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,21 +15,21 @@ import java.util.HashMap;
 import java.util.List;
 
 @Tag(name = "Pay", description = "결제 API")
-@RestController
+@RestController("mypagePayApi")
 @RequestMapping("/api/mypage/pay")
-public class PayApi extends CORSFilter {
+public class MypagePayApi extends CORSFilter {
 
-    private final PayService payService;
+    private final MypagePayService payService;
 
     @Autowired
-    public PayApi(PayService payService) {
+    public MypagePayApi(MypagePayService payService) {
         this.payService = payService;
     }
 
     @Operation(summary = "전체 주문 목록 조회", description = "전체 주문 내역을 조회합니다.")
     @GetMapping("/getOrderAllList")
     public JSONObject getOrderAllList(
-            @ModelAttribute("PayVO") PayVO payVO,
+            @ModelAttribute("PayVO") MypagePayVO payVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
@@ -71,7 +71,7 @@ public class PayApi extends CORSFilter {
     @Operation(summary = "온라인 주문 목록 조회", description = "온라인 강의/교재 주문 내역을 조회합니다.")
     @GetMapping("/getOrderOnList")
     public JSONObject getOrderOnList(
-            @ModelAttribute("PayVO") PayVO payVO,
+            @ModelAttribute("PayVO") MypagePayVO payVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
@@ -98,7 +98,7 @@ public class PayApi extends CORSFilter {
     @Operation(summary = "오프라인 주문 목록 조회", description = "오프라인 강의 주문 내역을 조회합니다.")
     @GetMapping("/getOrderOffList")
     public JSONObject getOrderOffList(
-            @ModelAttribute("PayVO") PayVO payVO,
+            @ModelAttribute("PayVO") MypagePayVO payVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
@@ -125,7 +125,7 @@ public class PayApi extends CORSFilter {
     @Operation(summary = "T 주문 목록 조회", description = "T 상품 주문 내역을 조회합니다.")
     @GetMapping("/getTOrderList")
     public JSONObject getTOrderList(
-            @ModelAttribute("PayVO") PayVO payVO,
+            @ModelAttribute("PayVO") MypagePayVO payVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
@@ -152,7 +152,7 @@ public class PayApi extends CORSFilter {
     @Operation(summary = "온라인 강의 주문 상세 조회", description = "온라인 강의 주문 상세 내역을 조회합니다.")
     @GetMapping("/getOrderDetailLectureOn")
     public JSONObject getOrderDetailLectureOn(
-            @ModelAttribute("PayVO") PayVO payVO,
+            @ModelAttribute("PayVO") MypagePayVO payVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
@@ -177,7 +177,7 @@ public class PayApi extends CORSFilter {
     @Operation(summary = "온라인 교재 주문 상세 조회", description = "온라인 교재 주문 상세 내역을 조회합니다.")
     @GetMapping("/getOrderDetailBookOn")
     public JSONObject getOrderDetailBookOn(
-            @ModelAttribute("PayVO") PayVO payVO,
+            @ModelAttribute("PayVO") MypagePayVO payVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
@@ -202,7 +202,7 @@ public class PayApi extends CORSFilter {
     @Operation(summary = "오프라인 강의 주문 상세 조회", description = "오프라인 강의 주문 상세 내역을 조회합니다.")
     @GetMapping("/getOrderDetailLectureOff")
     public JSONObject getOrderDetailLectureOff(
-            @ModelAttribute("PayVO") PayVO payVO,
+            @ModelAttribute("PayVO") MypagePayVO payVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
@@ -227,7 +227,7 @@ public class PayApi extends CORSFilter {
     @Operation(summary = "박스 주문 상세 조회", description = "박스 상품 주문 상세 내역을 조회합니다.")
     @GetMapping("/getOrderDetailBox")
     public JSONObject getOrderDetailBox(
-            @ModelAttribute("PayVO") PayVO payVO,
+            @ModelAttribute("PayVO") MypagePayVO payVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
@@ -252,7 +252,7 @@ public class PayApi extends CORSFilter {
     @Operation(summary = "룸 주문 상세 조회", description = "룸 상품 주문 상세 내역을 조회합니다.")
     @GetMapping("/getOrderDetailRoom")
     public JSONObject getOrderDetailRoom(
-            @ModelAttribute("PayVO") PayVO payVO,
+            @ModelAttribute("PayVO") MypagePayVO payVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
@@ -277,7 +277,7 @@ public class PayApi extends CORSFilter {
     @Operation(summary = "T 주문 상세 조회", description = "T 상품 주문 상세 내역을 조회합니다.")
     @GetMapping("/getTOrderDetail")
     public JSONObject getTOrderDetail(
-            @ModelAttribute("PayVO") PayVO payVO,
+            @ModelAttribute("PayVO") MypagePayVO payVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
@@ -302,7 +302,7 @@ public class PayApi extends CORSFilter {
     @Operation(summary = "온라인 주문 정보 조회", description = "온라인 주문 정보를 조회합니다.")
     @GetMapping("/getOrdersOn")
     public JSONObject getOrdersOn(
-            @ModelAttribute("PayVO") PayVO payVO,
+            @ModelAttribute("PayVO") MypagePayVO payVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
@@ -327,7 +327,7 @@ public class PayApi extends CORSFilter {
     @Operation(summary = "온라인 승인 정보 조회", description = "온라인 결제 승인 정보를 조회합니다.")
     @GetMapping("/getApprovalsOn")
     public JSONObject getApprovalsOn(
-            @ModelAttribute("PayVO") PayVO payVO,
+            @ModelAttribute("PayVO") MypagePayVO payVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
@@ -352,7 +352,7 @@ public class PayApi extends CORSFilter {
     @Operation(summary = "오프라인 주문 정보 조회", description = "오프라인 주문 정보를 조회합니다.")
     @GetMapping("/getOrdersOff")
     public JSONObject getOrdersOff(
-            @ModelAttribute("PayVO") PayVO payVO,
+            @ModelAttribute("PayVO") MypagePayVO payVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
@@ -377,7 +377,7 @@ public class PayApi extends CORSFilter {
     @Operation(summary = "오프라인 승인 정보 조회", description = "오프라인 결제 승인 정보를 조회합니다.")
     @GetMapping("/getApprovalsOff")
     public JSONObject getApprovalsOff(
-            @ModelAttribute("PayVO") PayVO payVO,
+            @ModelAttribute("PayVO") MypagePayVO payVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
@@ -402,7 +402,7 @@ public class PayApi extends CORSFilter {
     @Operation(summary = "T 주문 정보 조회", description = "T 상품 주문 정보를 조회합니다.")
     @GetMapping("/getTOrders")
     public JSONObject getTOrders(
-            @ModelAttribute("PayVO") PayVO payVO,
+            @ModelAttribute("PayVO") MypagePayVO payVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
@@ -427,7 +427,7 @@ public class PayApi extends CORSFilter {
     @Operation(summary = "T 승인 정보 조회", description = "T 상품 결제 승인 정보를 조회합니다.")
     @GetMapping("/getTApprovals")
     public JSONObject getTApprovals(
-            @ModelAttribute("PayVO") PayVO payVO,
+            @ModelAttribute("PayVO") MypagePayVO payVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
@@ -452,7 +452,7 @@ public class PayApi extends CORSFilter {
     @Operation(summary = "배송 정보 조회", description = "주문의 배송 정보를 조회합니다.")
     @GetMapping("/getDelivers")
     public JSONObject getDelivers(
-            @ModelAttribute("PayVO") PayVO payVO,
+            @ModelAttribute("PayVO") MypagePayVO payVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
@@ -477,7 +477,7 @@ public class PayApi extends CORSFilter {
     @Operation(summary = "교재 배송 목록 조회", description = "온라인 교재 배송 목록을 조회합니다.")
     @GetMapping("/getBookDeliveryOnList")
     public JSONObject getBookDeliveryOnList(
-            @ModelAttribute("PayVO") PayVO payVO,
+            @ModelAttribute("PayVO") MypagePayVO payVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
@@ -502,7 +502,7 @@ public class PayApi extends CORSFilter {
     @Operation(summary = "배송 정보 수정", description = "배송 정보를 수정합니다.")
     @PutMapping("/updateDeliverInfo")
     public JSONObject updateDeliverInfo(
-            @RequestBody PayVO payVO,
+            @RequestBody MypagePayVO payVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
@@ -530,7 +530,7 @@ public class PayApi extends CORSFilter {
     @Operation(summary = "사용자 취소 가능 여부 확인", description = "사용자가 주문을 취소할 수 있는지 확인합니다.")
     @GetMapping("/getUserCancelYN")
     public JSONObject getUserCancelYN(
-            @ModelAttribute("PayVO") PayVO payVO,
+            @ModelAttribute("PayVO") MypagePayVO payVO,
             HttpServletRequest request) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
