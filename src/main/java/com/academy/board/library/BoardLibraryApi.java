@@ -7,8 +7,6 @@ import com.academy.common.CommonUtil;
 import com.academy.common.PaginationInfo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,11 +40,9 @@ public class BoardLibraryApi extends CORSFilter {
     @Operation(summary = "자료실 게시판 목록 조회", description = "자료실 게시판 목록을 페이징하여 조회합니다.")
     @GetMapping("/getList")
     public JSONObject getList(
-            @ModelAttribute("BoardLibraryVO") BoardLibraryVO boardLibraryVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardLibraryVO") BoardLibraryVO boardLibraryVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardLibraryVO.getBoardMngSeq(), ""));
         params.put("BOARDTYPE", CommonUtil.isNull(boardLibraryVO.getBoardType(), ""));
@@ -87,11 +83,9 @@ public class BoardLibraryApi extends CORSFilter {
     @Operation(summary = "게시물 상세 조회", description = "자료실 게시물 상세 정보를 조회합니다.")
     @GetMapping("/getView")
     public JSONObject getView(
-            @ModelAttribute("BoardLibraryVO") BoardLibraryVO boardLibraryVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardLibraryVO") BoardLibraryVO boardLibraryVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("BOARD_SEQ", CommonUtil.isNull(boardLibraryVO.getBoardSeq(), ""));
         params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardLibraryVO.getBoardMngSeq(), ""));
@@ -114,40 +108,5 @@ public class BoardLibraryApi extends CORSFilter {
         jsonObject.put("retMsg", "OK");
 
         return new JSONObject(jsonObject);
-    }
-
-    /**
-     * 파라미터 설정
-     */
-    @SuppressWarnings("unchecked")
-    private void setParam(HashMap<String, String> params, HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-
-        if (session == null) {
-            params.put("USER_ID", "");
-            params.put("USER_NM", "");
-            params.put("REG_ID", "");
-            params.put("UPD_ID", "");
-            params.put("ISLOGIN", "N");
-        } else {
-            HashMap<String, String> loginInfo = (HashMap<String, String>) session.getAttribute("userInfo");
-            if (loginInfo != null && !loginInfo.isEmpty()) {
-                params.put("USER_ID", loginInfo.get("USER_ID"));
-                params.put("USER_NM", loginInfo.get("USER_NM"));
-                params.put("USER_ROLE", loginInfo.get("USER_ROLE"));
-                params.put("REG_ID", loginInfo.get("USER_ID"));
-                params.put("UPD_ID", loginInfo.get("USER_ID"));
-                params.put("ISLOGIN", "Y");
-            } else {
-                params.put("USER_ID", "");
-                params.put("USER_NM", "");
-                params.put("REG_ID", "");
-                params.put("UPD_ID", "");
-                params.put("ISLOGIN", "N");
-            }
-        }
-
-        params.put("topMenuType", CommonUtil.isNull(request.getParameter("topMenuType"), "O"));
-        params.put("topMenu", CommonUtil.isNull(request.getParameter("topMenu"), "MAIN"));
     }
 }

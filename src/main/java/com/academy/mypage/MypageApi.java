@@ -6,8 +6,6 @@ import com.academy.mypage.service.MypageService;
 import com.academy.mypage.service.MypageVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -37,20 +35,20 @@ public class MypageApi extends CORSFilter {
     @Operation(summary = "내 정보 조회", description = "로그인한 사용자의 개인 정보를 조회합니다.")
     @GetMapping("/getMyInfo")
     public JSONObject getMyInfo(
-            @ModelAttribute("MypageVO") MypageVO mypageVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("MypageVO") MypageVO mypageVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
-        String userId = params.get("USER_ID");
+        String userId = mypageVO.getUserId();
         if (userId == null || userId.isEmpty()) {
             jsonObject.put("retMsg", "FAIL");
             jsonObject.put("message", "로그인이 필요합니다.");
             return new JSONObject(jsonObject);
         }
+
+        params.put("USER_ID", userId);
 
         HashMap<String, Object> myInfo = mypageService.getMyInfo(params);
 
@@ -66,15 +64,13 @@ public class MypageApi extends CORSFilter {
     @Operation(summary = "내 정보 수정", description = "로그인한 사용자의 개인 정보를 수정합니다.")
     @PostMapping("/updateMyInfo")
     public JSONObject updateMyInfo(
-            @ModelAttribute("MypageVO") MypageVO mypageVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("MypageVO") MypageVO mypageVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
-        String userId = params.get("USER_ID");
+        String userId = mypageVO.getUserId();
         if (userId == null || userId.isEmpty()) {
             jsonObject.put("retMsg", "FAIL");
             jsonObject.put("message", "로그인이 필요합니다.");
@@ -82,6 +78,7 @@ public class MypageApi extends CORSFilter {
         }
 
         try {
+            params.put("USER_ID", userId);
             params.put("REG_ID", userId);
             params.put("USER_NM", CommonUtil.isNull(mypageVO.getUserNm(), ""));
             params.put("TEL_NO", CommonUtil.isNull(mypageVO.getTelNo(), ""));
@@ -112,15 +109,13 @@ public class MypageApi extends CORSFilter {
     @Operation(summary = "비밀번호 변경", description = "사용자의 비밀번호를 변경합니다.")
     @PostMapping("/updatePassword")
     public JSONObject updatePassword(
-            @ModelAttribute("MypageVO") MypageVO mypageVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("MypageVO") MypageVO mypageVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
-        String userId = params.get("USER_ID");
+        String userId = mypageVO.getUserId();
         if (userId == null || userId.isEmpty()) {
             jsonObject.put("retMsg", "FAIL");
             jsonObject.put("message", "로그인이 필요합니다.");
@@ -128,6 +123,7 @@ public class MypageApi extends CORSFilter {
         }
 
         try {
+            params.put("USER_ID", userId);
             params.put("REG_ID", userId);
             params.put("USER_PWD", CommonUtil.isNull(mypageVO.getUserPwd(), ""));
             mypageService.pwdUpdate(params);
@@ -148,15 +144,13 @@ public class MypageApi extends CORSFilter {
     @Operation(summary = "회원 탈퇴", description = "회원 탈퇴를 처리합니다.")
     @PostMapping("/secession")
     public JSONObject secession(
-            @ModelAttribute("MypageVO") MypageVO mypageVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("MypageVO") MypageVO mypageVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
-        String userId = params.get("USER_ID");
+        String userId = mypageVO.getUserId();
         if (userId == null || userId.isEmpty()) {
             jsonObject.put("retMsg", "FAIL");
             jsonObject.put("message", "로그인이 필요합니다.");
@@ -164,14 +158,9 @@ public class MypageApi extends CORSFilter {
         }
 
         try {
+            params.put("USER_ID", userId);
             params.put("REG_ID", userId);
             mypageService.secessionDelete(params);
-
-            // 세션 무효화
-            HttpSession session = request.getSession(false);
-            if (session != null) {
-                session.invalidate();
-            }
 
             jsonObject.put("retMsg", "OK");
             jsonObject.put("message", "회원 탈퇴가 완료되었습니다.");
@@ -189,20 +178,20 @@ public class MypageApi extends CORSFilter {
     @Operation(summary = "내 학습 정보 조회", description = "사용자의 학습 현황 정보를 조회합니다.")
     @GetMapping("/getMyStudyInfo")
     public JSONObject getMyStudyInfo(
-            @ModelAttribute("MypageVO") MypageVO mypageVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("MypageVO") MypageVO mypageVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
-        String userId = params.get("USER_ID");
+        String userId = mypageVO.getUserId();
         if (userId == null || userId.isEmpty()) {
             jsonObject.put("retMsg", "FAIL");
             jsonObject.put("message", "로그인이 필요합니다.");
             return new JSONObject(jsonObject);
         }
+
+        params.put("USER_ID", userId);
 
         HashMap<String, Object> studyInfo = mypageService.myStudyInfo(params);
 
@@ -218,20 +207,20 @@ public class MypageApi extends CORSFilter {
     @Operation(summary = "월별 학습 현황 조회", description = "사용자의 월별 학습 현황을 조회합니다.")
     @GetMapping("/getMyStudyForMonth")
     public JSONObject getMyStudyForMonth(
-            @ModelAttribute("MypageVO") MypageVO mypageVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("MypageVO") MypageVO mypageVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
-        String userId = params.get("USER_ID");
+        String userId = mypageVO.getUserId();
         if (userId == null || userId.isEmpty()) {
             jsonObject.put("retMsg", "FAIL");
             jsonObject.put("message", "로그인이 필요합니다.");
             return new JSONObject(jsonObject);
         }
+
+        params.put("USER_ID", userId);
 
         List<HashMap<String, Object>> studyList = mypageService.myStudyforMonth(params);
         List<HashMap<String, Object>> mockList = mypageService.myMockforMonth(params);
@@ -249,20 +238,20 @@ public class MypageApi extends CORSFilter {
     @Operation(summary = "내 강의 리스트 조회", description = "사용자의 수강 강의 목록을 조회합니다.")
     @GetMapping("/getMyLectureList")
     public JSONObject getMyLectureList(
-            @ModelAttribute("MypageVO") MypageVO mypageVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("MypageVO") MypageVO mypageVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
-        String userId = params.get("USER_ID");
+        String userId = mypageVO.getUserId();
         if (userId == null || userId.isEmpty()) {
             jsonObject.put("retMsg", "FAIL");
             jsonObject.put("message", "로그인이 필요합니다.");
             return new JSONObject(jsonObject);
         }
+
+        params.put("USER_ID", userId);
 
         List<HashMap<String, Object>> lectureList = mypageService.myLectureList(params);
 
@@ -278,20 +267,20 @@ public class MypageApi extends CORSFilter {
     @Operation(summary = "내 강의 코스 리스트 조회", description = "사용자의 코스별 수강 현황을 조회합니다.")
     @GetMapping("/getMyLectureCourseList")
     public JSONObject getMyLectureCourseList(
-            @ModelAttribute("MypageVO") MypageVO mypageVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("MypageVO") MypageVO mypageVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
-        String userId = params.get("USER_ID");
+        String userId = mypageVO.getUserId();
         if (userId == null || userId.isEmpty()) {
             jsonObject.put("retMsg", "FAIL");
             jsonObject.put("message", "로그인이 필요합니다.");
             return new JSONObject(jsonObject);
         }
+
+        params.put("USER_ID", userId);
 
         List<HashMap<String, Object>> courseList = mypageService.myLectureCourseList(params);
 
@@ -307,20 +296,20 @@ public class MypageApi extends CORSFilter {
     @Operation(summary = "수료증 강의 리스트 조회", description = "수료증 발급 가능한 강의 목록을 조회합니다.")
     @GetMapping("/getMyCertLectureList")
     public JSONObject getMyCertLectureList(
-            @ModelAttribute("MypageVO") MypageVO mypageVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("MypageVO") MypageVO mypageVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
-        String userId = params.get("USER_ID");
+        String userId = mypageVO.getUserId();
         if (userId == null || userId.isEmpty()) {
             jsonObject.put("retMsg", "FAIL");
             jsonObject.put("message", "로그인이 필요합니다.");
             return new JSONObject(jsonObject);
         }
+
+        params.put("USER_ID", userId);
 
         List<HashMap<String, Object>> certLectureList = mypageService.myCertLectureList(params);
 
@@ -336,11 +325,9 @@ public class MypageApi extends CORSFilter {
     @Operation(summary = "수료증 상세 조회", description = "수료증 상세 정보를 조회합니다.")
     @GetMapping("/getMyCertDetail")
     public JSONObject getMyCertDetail(
-            @ModelAttribute("MypageVO") MypageVO mypageVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("MypageVO") MypageVO mypageVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("ORDERNO", mypageVO.getOrderNo());
         params.put("MGNTNO", mypageVO.getMgntNo());
@@ -349,12 +336,14 @@ public class MypageApi extends CORSFilter {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
-        String userId = params.get("USER_ID");
+        String userId = mypageVO.getUserId();
         if (userId == null || userId.isEmpty()) {
             jsonObject.put("retMsg", "FAIL");
             jsonObject.put("message", "로그인이 필요합니다.");
             return new JSONObject(jsonObject);
         }
+
+        params.put("USER_ID", userId);
 
         HashMap<String, Object> certDetail;
         String packageNo = mypageVO.getPackageNo();
@@ -368,28 +357,6 @@ public class MypageApi extends CORSFilter {
         jsonObject.put("retMsg", "OK");
 
         return new JSONObject(jsonObject);
-    }
-
-    /**
-     * 파라미터 설정
-     */
-    @SuppressWarnings("unchecked")
-    private void setParam(HashMap<String, String> params, HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-
-        if (session == null) {
-            params.put("USER_ID", "");
-        } else {
-            HashMap<String, String> loginInfo = (HashMap<String, String>) session.getAttribute("userInfo");
-            if (loginInfo != null && !loginInfo.isEmpty()) {
-                params.put("USER_ID", loginInfo.get("USER_ID"));
-            } else {
-                params.put("USER_ID", "");
-            }
-        }
-
-        params.put("topMenuType", CommonUtil.isNull(request.getParameter("topMenuType"), "O"));
-        params.put("topMenu", CommonUtil.isNull(request.getParameter("topMenu"), "001"));
     }
 
 }

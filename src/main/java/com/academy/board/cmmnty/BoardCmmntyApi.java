@@ -7,8 +7,6 @@ import com.academy.common.CommonUtil;
 import com.academy.common.PaginationInfo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,11 +40,9 @@ public class BoardCmmntyApi extends CORSFilter {
     @Operation(summary = "커뮤니티 게시판 목록 조회", description = "커뮤니티 게시판 목록을 페이징하여 조회합니다.")
     @GetMapping("/getList")
     public JSONObject getList(
-            @ModelAttribute("BoardCmmntyVO") BoardCmmntyVO boardCmmntyVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardCmmntyVO") BoardCmmntyVO boardCmmntyVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardCmmntyVO.getBoardMngSeq(), ""));
         params.put("SEARCHTEXT", CommonUtil.isNull(boardCmmntyVO.getSearchText(), ""));
@@ -88,11 +84,9 @@ public class BoardCmmntyApi extends CORSFilter {
     @Operation(summary = "BEST 게시물 목록 조회", description = "BEST 게시물 목록을 조회합니다.")
     @GetMapping("/getBestList")
     public JSONObject getBestList(
-            @ModelAttribute("BoardCmmntyVO") BoardCmmntyVO boardCmmntyVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardCmmntyVO") BoardCmmntyVO boardCmmntyVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardCmmntyVO.getBoardMngSeq(), ""));
         params.put("topMenu", "MAIN");
@@ -114,11 +108,9 @@ public class BoardCmmntyApi extends CORSFilter {
     @Operation(summary = "게시물 상세 조회", description = "게시물 상세 정보를 조회합니다.")
     @GetMapping("/getView")
     public JSONObject getView(
-            @ModelAttribute("BoardCmmntyVO") BoardCmmntyVO boardCmmntyVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardCmmntyVO") BoardCmmntyVO boardCmmntyVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("BOARD_SEQ", CommonUtil.isNull(boardCmmntyVO.getBoardSeq(), ""));
         params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardCmmntyVO.getBoardMngSeq(), ""));
@@ -164,12 +156,14 @@ public class BoardCmmntyApi extends CORSFilter {
     @Operation(summary = "게시물 등록", description = "커뮤니티 게시물을 등록합니다.")
     @PostMapping("/insert")
     public JSONObject insert(
-            @ModelAttribute("BoardCmmntyVO") BoardCmmntyVO boardCmmntyVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardCmmntyVO") BoardCmmntyVO boardCmmntyVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
+        String userId = CommonUtil.isNull(boardCmmntyVO.getUserId(), "");
+        params.put("USER_ID", userId);
+        params.put("REG_ID", userId);
+        params.put("UPD_ID", userId);
         params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardCmmntyVO.getBoardMngSeq(), ""));
         params.put("SUBJECT", CommonUtil.isNull(boardCmmntyVO.getSubject(), ""));
         params.put("CONTENT", CommonUtil.isNull(boardCmmntyVO.getContent(), ""));
@@ -198,12 +192,13 @@ public class BoardCmmntyApi extends CORSFilter {
     @Operation(summary = "게시물 수정", description = "커뮤니티 게시물을 수정합니다.")
     @PostMapping("/update")
     public JSONObject update(
-            @ModelAttribute("BoardCmmntyVO") BoardCmmntyVO boardCmmntyVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardCmmntyVO") BoardCmmntyVO boardCmmntyVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
+        String userId = CommonUtil.isNull(boardCmmntyVO.getUserId(), "");
+        params.put("USER_ID", userId);
+        params.put("UPD_ID", userId);
         params.put("BOARD_SEQ", CommonUtil.isNull(boardCmmntyVO.getBoardSeq(), ""));
         params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardCmmntyVO.getBoardMngSeq(), ""));
         params.put("SUBJECT", CommonUtil.isNull(boardCmmntyVO.getSubject(), ""));
@@ -230,12 +225,13 @@ public class BoardCmmntyApi extends CORSFilter {
     @Operation(summary = "게시물 삭제", description = "커뮤니티 게시물을 삭제합니다.")
     @PostMapping("/delete")
     public JSONObject delete(
-            @ModelAttribute("BoardCmmntyVO") BoardCmmntyVO boardCmmntyVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardCmmntyVO") BoardCmmntyVO boardCmmntyVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
+        String userId = CommonUtil.isNull(boardCmmntyVO.getUserId(), "");
+        params.put("USER_ID", userId);
+        params.put("UPD_ID", userId);
         params.put("BOARD_SEQ", CommonUtil.isNull(boardCmmntyVO.getBoardSeq(), ""));
         params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardCmmntyVO.getBoardMngSeq(), ""));
 
@@ -258,12 +254,13 @@ public class BoardCmmntyApi extends CORSFilter {
     @Operation(summary = "추천 등록", description = "게시물을 추천합니다.")
     @PostMapping("/recommend")
     public JSONObject recommend(
-            @ModelAttribute("BoardCmmntyVO") BoardCmmntyVO boardCmmntyVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardCmmntyVO") BoardCmmntyVO boardCmmntyVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
+        String userId = CommonUtil.isNull(boardCmmntyVO.getUserId(), "");
+        params.put("USER_ID", userId);
+        params.put("REG_ID", userId);
         params.put("BOARD_SEQ", CommonUtil.isNull(boardCmmntyVO.getBoardSeq(), ""));
         params.put("ISTYPE", "R");
         params.put("VOTING", "Y");
@@ -287,11 +284,9 @@ public class BoardCmmntyApi extends CORSFilter {
     @Operation(summary = "댓글 목록 조회", description = "게시물의 댓글 목록을 조회합니다.")
     @GetMapping("/getComments")
     public JSONObject getComments(
-            @ModelAttribute("BoardCmmntyVO") BoardCmmntyVO boardCmmntyVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardCmmntyVO") BoardCmmntyVO boardCmmntyVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("BOARD_SEQ", CommonUtil.isNull(boardCmmntyVO.getBoardSeq(), ""));
 
@@ -313,12 +308,13 @@ public class BoardCmmntyApi extends CORSFilter {
     @PostMapping("/insertComment")
     public JSONObject insertComment(
             @ModelAttribute("BoardCmmntyVO") BoardCmmntyVO boardCmmntyVO,
-            @RequestParam(value = "commentContent", required = false) String commentContent,
-            HttpServletRequest request) throws Exception {
+            @RequestParam(value = "commentContent", required = false) String commentContent) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
+        String userId = CommonUtil.isNull(boardCmmntyVO.getUserId(), "");
+        params.put("USER_ID", userId);
+        params.put("REG_ID", userId);
         params.put("BOARD_SEQ", CommonUtil.isNull(boardCmmntyVO.getBoardSeq(), ""));
         params.put("CONTENT", CommonUtil.isNull(commentContent, ""));
 
@@ -341,12 +337,14 @@ public class BoardCmmntyApi extends CORSFilter {
     @Operation(summary = "댓글 삭제", description = "게시물의 댓글을 삭제합니다.")
     @PostMapping("/deleteComment")
     public JSONObject deleteComment(
-            @RequestParam(value = "commentSeq", required = false) String commentSeq,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardCmmntyVO") BoardCmmntyVO boardCmmntyVO,
+            @RequestParam(value = "commentSeq", required = false) String commentSeq) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
+        String userId = CommonUtil.isNull(boardCmmntyVO.getUserId(), "");
+        params.put("USER_ID", userId);
+        params.put("UPD_ID", userId);
         params.put("COMMENT_SEQ", CommonUtil.isNull(commentSeq, ""));
 
         HashMap<String, Object> jsonObject = new HashMap<>();
@@ -360,40 +358,5 @@ public class BoardCmmntyApi extends CORSFilter {
         }
 
         return new JSONObject(jsonObject);
-    }
-
-    /**
-     * 파라미터 설정
-     */
-    @SuppressWarnings("unchecked")
-    private void setParam(HashMap<String, String> params, HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-
-        if (session == null) {
-            params.put("USER_ID", "");
-            params.put("USER_NM", "");
-            params.put("REG_ID", "");
-            params.put("UPD_ID", "");
-            params.put("ISLOGIN", "N");
-        } else {
-            HashMap<String, String> loginInfo = (HashMap<String, String>) session.getAttribute("userInfo");
-            if (loginInfo != null && !loginInfo.isEmpty()) {
-                params.put("USER_ID", loginInfo.get("USER_ID"));
-                params.put("USER_NM", loginInfo.get("USER_NM"));
-                params.put("USER_ROLE", loginInfo.get("USER_ROLE"));
-                params.put("REG_ID", loginInfo.get("USER_ID"));
-                params.put("UPD_ID", loginInfo.get("USER_ID"));
-                params.put("ISLOGIN", "Y");
-            } else {
-                params.put("USER_ID", "");
-                params.put("USER_NM", "");
-                params.put("REG_ID", "");
-                params.put("UPD_ID", "");
-                params.put("ISLOGIN", "N");
-            }
-        }
-
-        params.put("topMenuType", CommonUtil.isNull(request.getParameter("topMenuType"), "O"));
-        params.put("topMenu", CommonUtil.isNull(request.getParameter("topMenu"), "MAIN"));
     }
 }

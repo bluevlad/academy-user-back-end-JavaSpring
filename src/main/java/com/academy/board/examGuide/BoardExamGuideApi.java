@@ -7,8 +7,6 @@ import com.academy.common.CommonUtil;
 import com.academy.common.PaginationInfo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,11 +40,9 @@ public class BoardExamGuideApi extends CORSFilter {
     @Operation(summary = "시험안내 게시판 목록 조회", description = "시험안내 게시판 목록을 페이징하여 조회합니다.")
     @GetMapping("/getList")
     public JSONObject getList(
-            @ModelAttribute("BoardExamGuideVO") BoardExamGuideVO boardExamGuideVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardExamGuideVO") BoardExamGuideVO boardExamGuideVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardExamGuideVO.getBoardMngSeq(), ""));
         params.put("BOARDTYPE", CommonUtil.isNull(boardExamGuideVO.getBoardType(), ""));
@@ -110,11 +106,9 @@ public class BoardExamGuideApi extends CORSFilter {
     @Operation(summary = "게시물 상세 조회", description = "시험안내 게시물 상세 정보를 조회합니다.")
     @GetMapping("/getView")
     public JSONObject getView(
-            @ModelAttribute("BoardExamGuideVO") BoardExamGuideVO boardExamGuideVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardExamGuideVO") BoardExamGuideVO boardExamGuideVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("BOARD_SEQ", CommonUtil.isNull(boardExamGuideVO.getBoardSeq(), ""));
         params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardExamGuideVO.getBoardMngSeq(), ""));
@@ -142,8 +136,7 @@ public class BoardExamGuideApi extends CORSFilter {
     @Operation(summary = "공고 구분 코드 목록 조회", description = "공고 구분 코드 목록을 조회합니다.")
     @GetMapping("/getPubGubun")
     public JSONObject getPubGubun(
-            @RequestParam(value = "sysCd", required = false, defaultValue = "PUB_TYPE") String sysCd,
-            HttpServletRequest request) throws Exception {
+            @RequestParam(value = "sysCd", required = false, defaultValue = "PUB_TYPE") String sysCd) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
         params.put("SYS_CD", sysCd);
@@ -155,40 +148,5 @@ public class BoardExamGuideApi extends CORSFilter {
         jsonObject.put("retMsg", "OK");
 
         return new JSONObject(jsonObject);
-    }
-
-    /**
-     * 파라미터 설정
-     */
-    @SuppressWarnings("unchecked")
-    private void setParam(HashMap<String, String> params, HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-
-        if (session == null) {
-            params.put("USER_ID", "");
-            params.put("USER_NM", "");
-            params.put("REG_ID", "");
-            params.put("UPD_ID", "");
-            params.put("ISLOGIN", "N");
-        } else {
-            HashMap<String, String> loginInfo = (HashMap<String, String>) session.getAttribute("userInfo");
-            if (loginInfo != null && !loginInfo.isEmpty()) {
-                params.put("USER_ID", loginInfo.get("USER_ID"));
-                params.put("USER_NM", loginInfo.get("USER_NM"));
-                params.put("USER_ROLE", loginInfo.get("USER_ROLE"));
-                params.put("REG_ID", loginInfo.get("USER_ID"));
-                params.put("UPD_ID", loginInfo.get("USER_ID"));
-                params.put("ISLOGIN", "Y");
-            } else {
-                params.put("USER_ID", "");
-                params.put("USER_NM", "");
-                params.put("REG_ID", "");
-                params.put("UPD_ID", "");
-                params.put("ISLOGIN", "N");
-            }
-        }
-
-        params.put("topMenuType", CommonUtil.isNull(request.getParameter("topMenuType"), "F"));
-        params.put("topMenu", CommonUtil.isNull(request.getParameter("topMenu"), "MAIN"));
     }
 }

@@ -7,8 +7,6 @@ import com.academy.interview.service.InterviewService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -47,14 +45,12 @@ public class InterviewApi extends CORSFilter {
             @Parameter(description = "검색 종류") @RequestParam(required = false) String searchKind,
             @Parameter(description = "검색어") @RequestParam(required = false) String searchText,
             @Parameter(description = "현재 페이지") @RequestParam(defaultValue = "1") int currentPage,
-            @Parameter(description = "페이지당 건수") @RequestParam(required = false) Integer pageRow,
-            HttpServletRequest request) throws Exception {
+            @Parameter(description = "페이지당 건수") @RequestParam(required = false) Integer pageRow) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("BOARD_MNG_SEQ", boardMngSeq);
-        params.put("topMenu", CommonUtil.isNull(topMenu, params.get("topMenu")));
+        params.put("topMenu", CommonUtil.isNull(topMenu, "001"));
         params.put("SEARCHKIND", CommonUtil.isNull(searchKind, ""));
         params.put("SEARCHTEXT", CommonUtil.isNull(searchText, ""));
 
@@ -90,11 +86,9 @@ public class InterviewApi extends CORSFilter {
     @GetMapping("/getBoardDetail")
     public JSONObject getBoardDetail(
             @Parameter(description = "게시판 관리 SEQ", required = true) @RequestParam String boardMngSeq,
-            @Parameter(description = "게시글 SEQ", required = true) @RequestParam String boardSeq,
-            HttpServletRequest request) throws Exception {
+            @Parameter(description = "게시글 SEQ", required = true) @RequestParam String boardSeq) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("BOARD_MNG_SEQ", boardMngSeq);
         params.put("BOARD_SEQ", boardSeq);
@@ -114,10 +108,7 @@ public class InterviewApi extends CORSFilter {
     @Operation(summary = "게시글 등록", description = "상담/문의 게시글을 등록합니다.")
     @PostMapping("/insertBoard")
     public JSONObject insertBoard(
-            @RequestBody HashMap<String, String> params,
-            HttpServletRequest request) throws Exception {
-
-        setParam(params, request);
+            @RequestBody HashMap<String, String> params) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
@@ -152,10 +143,7 @@ public class InterviewApi extends CORSFilter {
     @Operation(summary = "게시글 수정", description = "상담/문의 게시글을 수정합니다.")
     @PostMapping("/updateBoard")
     public JSONObject updateBoard(
-            @RequestBody HashMap<String, String> params,
-            HttpServletRequest request) throws Exception {
-
-        setParam(params, request);
+            @RequestBody HashMap<String, String> params) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
@@ -189,10 +177,7 @@ public class InterviewApi extends CORSFilter {
     @Operation(summary = "게시글 삭제", description = "상담/문의 게시글을 삭제합니다.")
     @PostMapping("/deleteBoard")
     public JSONObject deleteBoard(
-            @RequestBody HashMap<String, String> params,
-            HttpServletRequest request) throws Exception {
-
-        setParam(params, request);
+            @RequestBody HashMap<String, String> params) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
@@ -214,28 +199,6 @@ public class InterviewApi extends CORSFilter {
         }
 
         return new JSONObject(jsonObject);
-    }
-
-    /**
-     * 파라미터 설정
-     */
-    @SuppressWarnings("unchecked")
-    private void setParam(HashMap<String, String> params, HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-
-        if (session == null) {
-            params.put("USER_ID", "");
-        } else {
-            HashMap<String, String> loginInfo = (HashMap<String, String>) session.getAttribute("userInfo");
-            if (loginInfo != null && !loginInfo.isEmpty()) {
-                params.put("USER_ID", loginInfo.get("USER_ID"));
-            } else {
-                params.put("USER_ID", "");
-            }
-        }
-
-        params.put("topMenuType", CommonUtil.isNull(request.getParameter("topMenuType"), "O"));
-        params.put("topMenu", CommonUtil.isNull(request.getParameter("topMenu"), "001"));
     }
 
 }

@@ -11,9 +11,6 @@ import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
@@ -39,11 +36,11 @@ public class TeacherZoneApi extends CORSFilter {
     @Operation(summary = "대시보드 정보 조회", description = "교수 대시보드 정보를 조회합니다.")
     @GetMapping("/dashboard")
     public JSONObject getDashboard(
-            @ModelAttribute("TeacherZoneVO") TeacherZoneVO teacherZoneVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("TeacherZoneVO") TeacherZoneVO teacherZoneVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
+        params.put("USER_ID", CommonUtil.isNull(teacherZoneVO.getUserId(), ""));
+        params.put("searchUserId", CommonUtil.isNull(teacherZoneVO.getUserId(), ""));
 
         params.put("LOG_CNT", "5");
 
@@ -58,7 +55,8 @@ public class TeacherZoneApi extends CORSFilter {
         List<HashMap<String, Object>> offLecSum = null;
         List<HashMap<String, Object>> onLecSum = null;
 
-        if (params.get("USER_ID") != null && !params.get("USER_ID").isEmpty()) {
+        String userId = teacherZoneVO.getUserId();
+        if (userId != null && !userId.isEmpty()) {
             offLecSum = teacherZoneService.offLectureSum(params);
             onLecSum = teacherZoneService.onLectureSum(params);
         }
@@ -68,7 +66,6 @@ public class TeacherZoneApi extends CORSFilter {
         jsonObject.put("loginIpList", loginIpList);
         jsonObject.put("offLecSum", offLecSum);
         jsonObject.put("onLecSum", onLecSum);
-        jsonObject.put("userIp", request.getRemoteAddr());
         jsonObject.put("retMsg", "OK");
 
         return new JSONObject(jsonObject);
@@ -80,11 +77,11 @@ public class TeacherZoneApi extends CORSFilter {
     @Operation(summary = "강의 목록 조회", description = "교수의 강의 목록을 조회합니다.")
     @GetMapping("/lectures")
     public JSONObject getLectureList(
-            @ModelAttribute("TeacherZoneVO") TeacherZoneVO teacherZoneVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("TeacherZoneVO") TeacherZoneVO teacherZoneVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
+        params.put("USER_ID", CommonUtil.isNull(teacherZoneVO.getUserId(), ""));
+        params.put("searchUserId", CommonUtil.isNull(teacherZoneVO.getUserId(), ""));
 
         // VO 파라미터 매핑
         String topMenuType = CommonUtil.isNull(teacherZoneVO.getTopMenuType(), "F");
@@ -163,11 +160,11 @@ public class TeacherZoneApi extends CORSFilter {
     @GetMapping("/lecture/{lecCode}")
     public JSONObject getLectureDetail(
             @PathVariable("lecCode") String lecCode,
-            @ModelAttribute("TeacherZoneVO") TeacherZoneVO teacherZoneVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("TeacherZoneVO") TeacherZoneVO teacherZoneVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
+        params.put("USER_ID", CommonUtil.isNull(teacherZoneVO.getUserId(), ""));
+        params.put("searchUserId", CommonUtil.isNull(teacherZoneVO.getUserId(), ""));
 
         params.put("LECCODE", lecCode);
         params.put("topMenuType", CommonUtil.isNull(teacherZoneVO.getTopMenuType(), "O"));
@@ -215,11 +212,11 @@ public class TeacherZoneApi extends CORSFilter {
     @Operation(summary = "동영상 강의 목록 조회", description = "교수의 동영상 강의 목록을 조회합니다.")
     @GetMapping("/movies")
     public JSONObject getMovieLectureList(
-            @ModelAttribute("TeacherZoneVO") TeacherZoneVO teacherZoneVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("TeacherZoneVO") TeacherZoneVO teacherZoneVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
+        params.put("USER_ID", CommonUtil.isNull(teacherZoneVO.getUserId(), ""));
+        params.put("searchUserId", CommonUtil.isNull(teacherZoneVO.getUserId(), ""));
 
         params.put("searchCategory", CommonUtil.isNull(teacherZoneVO.getSearchCategory(), ""));
         params.put("searchLearningCD", CommonUtil.isNull(teacherZoneVO.getSearchLearningCd(), ""));
@@ -265,10 +262,11 @@ public class TeacherZoneApi extends CORSFilter {
     @GetMapping("/lecture/{lecCode}/movies")
     public JSONObject getMovieList(
             @PathVariable("lecCode") String lecCode,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("TeacherZoneVO") TeacherZoneVO teacherZoneVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
+        params.put("USER_ID", CommonUtil.isNull(teacherZoneVO.getUserId(), ""));
+        params.put("searchUserId", CommonUtil.isNull(teacherZoneVO.getUserId(), ""));
 
         params.put("LECCODE", lecCode);
 
@@ -289,11 +287,11 @@ public class TeacherZoneApi extends CORSFilter {
     @Operation(summary = "주문 통계 조회", description = "교수의 강의 주문 통계를 조회합니다.")
     @GetMapping("/order-stats")
     public JSONObject getOrderStats(
-            @ModelAttribute("TeacherZoneVO") TeacherZoneVO teacherZoneVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("TeacherZoneVO") TeacherZoneVO teacherZoneVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
+        params.put("USER_ID", CommonUtil.isNull(teacherZoneVO.getUserId(), ""));
+        params.put("searchUserId", CommonUtil.isNull(teacherZoneVO.getUserId(), ""));
 
         List<HashMap<String, Object>> statList = teacherZoneService.onOrderStat(params);
 
@@ -304,38 +302,4 @@ public class TeacherZoneApi extends CORSFilter {
         return new JSONObject(jsonObject);
     }
 
-    /**
-     * 파라미터 설정
-     */
-    @SuppressWarnings("unchecked")
-    private void setParam(HashMap<String, String> params, HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-
-        if (session == null) {
-            params.put("USER_ID", "");
-            params.put("searchUserId", "");
-        } else {
-            HashMap<String, String> loginInfo = (HashMap<String, String>) session.getAttribute("userInfo");
-            if (loginInfo != null && !loginInfo.isEmpty()) {
-                params.put("USER_ID", loginInfo.get("USER_ID"));
-                params.put("searchUserId", loginInfo.get("USER_ID"));
-            } else {
-                params.put("USER_ID", "");
-                params.put("searchUserId", "");
-            }
-        }
-
-        // 기본 날짜 설정 (현재 월의 1일 ~ 마지막 날)
-        Date date = new Date();
-        Calendar cal = Calendar.getInstance();
-        String lastDay = String.valueOf(cal.getActualMaximum(Calendar.DAY_OF_MONTH));
-
-        SimpleDateFormat sDate = new SimpleDateFormat("yyyyMM01");
-        SimpleDateFormat eDate = new SimpleDateFormat("yyyyMM" + lastDay);
-        String startDay = sDate.format(date);
-        String endDay = eDate.format(date);
-
-        params.put("searchStartDate", CommonUtil.isNull(request.getParameter("searchStartDate"), startDay));
-        params.put("searchEndDate", CommonUtil.isNull(request.getParameter("searchEndDate"), endDay));
-    }
 }

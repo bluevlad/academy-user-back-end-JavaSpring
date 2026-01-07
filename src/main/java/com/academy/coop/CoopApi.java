@@ -7,8 +7,6 @@ import com.academy.common.CommonUtil;
 import com.academy.common.PaginationInfo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,11 +40,9 @@ public class CoopApi extends CORSFilter {
     @Operation(summary = "제휴사 게시판 목록 조회", description = "제휴사 게시판 목록을 페이징하여 조회합니다.")
     @GetMapping("/getList")
     public JSONObject getList(
-            @ModelAttribute("CoopVO") CoopVO coopVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("CoopVO") CoopVO coopVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("COOP_AREA", CommonUtil.isNull(coopVO.getCoopArea(), ""));
         params.put("COOP_CATE", CommonUtil.isNull(coopVO.getCoopCate(), ""));
@@ -95,11 +91,9 @@ public class CoopApi extends CORSFilter {
     @Operation(summary = "제휴사 공지/추천 목록 조회", description = "제휴사 공지사항 및 추천 목록을 조회합니다.")
     @GetMapping("/getNoticeList")
     public JSONObject getNoticeList(
-            @ModelAttribute("CoopVO") CoopVO coopVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("CoopVO") CoopVO coopVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         // 추천 목록 (썸네일)
         params.put("RECOMMEND", "Y");
@@ -127,11 +121,9 @@ public class CoopApi extends CORSFilter {
     @Operation(summary = "제휴사 게시판 상세 조회", description = "제휴사 게시판 상세 정보를 조회합니다.")
     @GetMapping("/getView")
     public JSONObject getView(
-            @ModelAttribute("CoopVO") CoopVO coopVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("CoopVO") CoopVO coopVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("COOP_BOARD_SEQ", CommonUtil.isNull(coopVO.getCoopBoardSeq(), ""));
 
@@ -153,11 +145,9 @@ public class CoopApi extends CORSFilter {
     @Operation(summary = "제휴사 코드 목록 조회", description = "제휴사 관련 코드 목록을 조회합니다.")
     @GetMapping("/getCodeList")
     public JSONObject getCodeList(
-            @ModelAttribute("CoopVO") CoopVO coopVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("CoopVO") CoopVO coopVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("SEARCHKEYWORD", CommonUtil.isNull(coopVO.getSearchKeyword(), "COOP_AREA"));
 
@@ -176,11 +166,9 @@ public class CoopApi extends CORSFilter {
     @Operation(summary = "쿠폰 사용 가능 여부 확인", description = "쿠폰 코드의 사용 가능 여부를 확인합니다.")
     @GetMapping("/checkCoupon")
     public JSONObject checkCoupon(
-            @ModelAttribute("CoopVO") CoopVO coopVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("CoopVO") CoopVO coopVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         String couponCode = CommonUtil.isNull(coopVO.getCouponCode(), "");
         params.put("COUPONCODE", couponCode.toUpperCase());
@@ -201,40 +189,5 @@ public class CoopApi extends CORSFilter {
         }
 
         return new JSONObject(jsonObject);
-    }
-
-    /**
-     * 파라미터 설정
-     */
-    @SuppressWarnings("unchecked")
-    private void setParam(HashMap<String, Object> params, HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-
-        if (session == null) {
-            params.put("USER_ID", "");
-            params.put("USER_NM", "");
-            params.put("REG_ID", "");
-            params.put("UPD_ID", "");
-            params.put("ISLOGIN", "N");
-        } else {
-            HashMap<String, String> loginInfo = (HashMap<String, String>) session.getAttribute("userInfo");
-            if (loginInfo != null && !loginInfo.isEmpty()) {
-                params.put("USER_ID", loginInfo.get("USER_ID"));
-                params.put("USER_NM", loginInfo.get("USER_NM"));
-                params.put("USER_ROLE", loginInfo.get("USER_ROLE"));
-                params.put("REG_ID", loginInfo.get("USER_ID"));
-                params.put("UPD_ID", loginInfo.get("USER_ID"));
-                params.put("ISLOGIN", "Y");
-            } else {
-                params.put("USER_ID", "");
-                params.put("USER_NM", "");
-                params.put("REG_ID", "");
-                params.put("UPD_ID", "");
-                params.put("ISLOGIN", "N");
-            }
-        }
-
-        params.put("topMenuType", CommonUtil.isNull(request.getParameter("topMenuType"), "O"));
-        params.put("topMenu", CommonUtil.isNull(request.getParameter("topMenu"), "MAIN"));
     }
 }

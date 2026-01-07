@@ -7,8 +7,6 @@ import com.academy.common.CommonUtil;
 import com.academy.common.PaginationInfo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,11 +40,9 @@ public class BookCmmntApi extends CORSFilter {
     @Operation(summary = "도서 후기 목록 조회", description = "도서 후기 목록을 페이징하여 조회합니다.")
     @GetMapping("/getList")
     public JSONObject getList(
-            @ModelAttribute("BookCmmntVO") BookCmmntVO bookCmmntVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BookCmmntVO") BookCmmntVO bookCmmntVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("SEARCHSUBJECT", CommonUtil.isNull(bookCmmntVO.getSearchSubject(), ""));
         params.put("SEARCHTEAC", CommonUtil.isNull(bookCmmntVO.getSearchTeac(), ""));
@@ -85,11 +81,10 @@ public class BookCmmntApi extends CORSFilter {
     @Operation(summary = "도서 상세 후기 목록 조회", description = "특정 도서의 후기 목록을 페이징하여 조회합니다.")
     @GetMapping("/getDetailList")
     public JSONObject getDetailList(
-            @ModelAttribute("BookCmmntVO") BookCmmntVO bookCmmntVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BookCmmntVO") BookCmmntVO bookCmmntVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
+        params.put("USER_ID", CommonUtil.isNull(bookCmmntVO.getUserId(), ""));
 
         params.put("RSC_ID", CommonUtil.isNull(bookCmmntVO.getRscId(), ""));
 
@@ -135,21 +130,22 @@ public class BookCmmntApi extends CORSFilter {
     @Operation(summary = "도서 후기 등록", description = "도서 후기를 등록합니다.")
     @PostMapping("/insert")
     public JSONObject insert(
-            @ModelAttribute("BookCmmntVO") BookCmmntVO bookCmmntVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BookCmmntVO") BookCmmntVO bookCmmntVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
         // 로그인 체크
-        if (params.get("USER_ID") == null || params.get("USER_ID").isEmpty()) {
+        String userId = bookCmmntVO.getUserId();
+        if (userId == null || userId.isEmpty()) {
             jsonObject.put("retMsg", "FAIL");
             jsonObject.put("message", "로그인이 필요합니다.");
             return new JSONObject(jsonObject);
         }
 
+        params.put("USER_ID", userId);
+        params.put("REG_ID", userId);
         params.put("RSC_ID", CommonUtil.isNull(bookCmmntVO.getRscId(), ""));
         params.put("TITLE", CommonUtil.isNull(bookCmmntVO.getTitle(), ""));
         params.put("CONTENT", CommonUtil.isNull(bookCmmntVO.getContent(), ""));
@@ -189,21 +185,21 @@ public class BookCmmntApi extends CORSFilter {
     @Operation(summary = "도서 후기 삭제", description = "도서 후기를 삭제합니다.")
     @PostMapping("/delete")
     public JSONObject delete(
-            @ModelAttribute("BookCmmntVO") BookCmmntVO bookCmmntVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BookCmmntVO") BookCmmntVO bookCmmntVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
         // 로그인 체크
-        if (params.get("USER_ID") == null || params.get("USER_ID").isEmpty()) {
+        String userId = bookCmmntVO.getUserId();
+        if (userId == null || userId.isEmpty()) {
             jsonObject.put("retMsg", "FAIL");
             jsonObject.put("message", "로그인이 필요합니다.");
             return new JSONObject(jsonObject);
         }
 
+        params.put("USER_ID", userId);
         params.put("DELETE_RSCID", CommonUtil.isNull(bookCmmntVO.getDeleteRscId(), ""));
         params.put("DELETE_SEQ", CommonUtil.isNull(bookCmmntVO.getDeleteSeq(), ""));
 
@@ -225,11 +221,10 @@ public class BookCmmntApi extends CORSFilter {
     @Operation(summary = "도서 구매 여부 확인", description = "사용자의 도서 구매 여부를 확인합니다.")
     @GetMapping("/checkPurchase")
     public JSONObject checkPurchase(
-            @ModelAttribute("BookCmmntVO") BookCmmntVO bookCmmntVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BookCmmntVO") BookCmmntVO bookCmmntVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
+        params.put("USER_ID", CommonUtil.isNull(bookCmmntVO.getUserId(), ""));
 
         params.put("RSC_ID", CommonUtil.isNull(bookCmmntVO.getRscId(), ""));
 
@@ -258,34 +253,4 @@ public class BookCmmntApi extends CORSFilter {
         return new JSONObject(jsonObject);
     }
 
-    /**
-     * 파라미터 설정
-     */
-    @SuppressWarnings("unchecked")
-    private void setParam(HashMap<String, String> params, HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-
-        if (session == null) {
-            params.put("USER_ID", "");
-            params.put("USER_NM", "");
-            params.put("REG_ID", "");
-            params.put("UPD_ID", "");
-        } else {
-            HashMap<String, String> loginInfo = (HashMap<String, String>) session.getAttribute("userInfo");
-            if (loginInfo != null && !loginInfo.isEmpty()) {
-                params.put("USER_ID", loginInfo.get("USER_ID"));
-                params.put("USER_NM", loginInfo.get("USER_NM"));
-                params.put("REG_ID", loginInfo.get("USER_ID"));
-                params.put("UPD_ID", loginInfo.get("USER_ID"));
-            } else {
-                params.put("USER_ID", "");
-                params.put("USER_NM", "");
-                params.put("REG_ID", "");
-                params.put("UPD_ID", "");
-            }
-        }
-
-        params.put("topMenuType", CommonUtil.isNull(request.getParameter("topMenuType"), "O"));
-        params.put("topMenu", CommonUtil.isNull(request.getParameter("topMenu"), "001"));
-    }
 }

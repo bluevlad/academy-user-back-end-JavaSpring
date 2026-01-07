@@ -7,8 +7,6 @@ import com.academy.common.CommonUtil;
 import com.academy.common.PaginationInfo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -45,11 +43,9 @@ public class BoardCustomerOnApi extends CORSFilter {
     @Operation(summary = "쿠폰 유효성 검사", description = "쿠폰 코드의 유효성을 검사합니다.")
     @PostMapping("/checkCoupon")
     public JSONObject checkCoupon(
-            @ModelAttribute("BoardCustomerOnVO") BoardCustomerOnVO boardCustomerOnVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardCustomerOnVO") BoardCustomerOnVO boardCustomerOnVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         String couponCode = CommonUtil.isNull(boardCustomerOnVO.getCouponCode(), "").toUpperCase();
         params.put("COUPONCODE", couponCode);
@@ -103,12 +99,13 @@ public class BoardCustomerOnApi extends CORSFilter {
     @Operation(summary = "쿠폰 등록", description = "쿠폰을 등록합니다.")
     @PostMapping("/insertCoupon")
     public JSONObject insertCoupon(
-            @ModelAttribute("BoardCustomerOnVO") BoardCustomerOnVO boardCustomerOnVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardCustomerOnVO") BoardCustomerOnVO boardCustomerOnVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
+        String userId = CommonUtil.isNull(boardCustomerOnVO.getUserId(), "");
+        params.put("USER_ID", userId);
+        params.put("REG_ID", userId);
         params.put("CCode", CommonUtil.isNull(boardCustomerOnVO.getcCode(), ""));
         params.put("IDX", CommonUtil.isNull(boardCustomerOnVO.getIdx(), ""));
 
@@ -149,12 +146,13 @@ public class BoardCustomerOnApi extends CORSFilter {
     @Operation(summary = "제휴 쿠폰 등록", description = "제휴 쿠폰을 등록합니다.")
     @PostMapping("/insertCoopCoupon")
     public JSONObject insertCoopCoupon(
-            @ModelAttribute("BoardCustomerOnVO") BoardCustomerOnVO boardCustomerOnVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardCustomerOnVO") BoardCustomerOnVO boardCustomerOnVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
+        String userId = CommonUtil.isNull(boardCustomerOnVO.getUserId(), "");
+        params.put("USER_ID", userId);
+        params.put("REG_ID", userId);
         String couponCode = CommonUtil.isNull(boardCustomerOnVO.getCouponCode(), "").toUpperCase();
         params.put("COUPONCODE", couponCode);
 
@@ -199,11 +197,9 @@ public class BoardCustomerOnApi extends CORSFilter {
     @Operation(summary = "이벤트 댓글 목록 조회", description = "이벤트 댓글 목록을 페이징하여 조회합니다.")
     @GetMapping("/getEventReplyList")
     public JSONObject getEventReplyList(
-            @ModelAttribute("BoardCustomerOnVO") BoardCustomerOnVO boardCustomerOnVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardCustomerOnVO") BoardCustomerOnVO boardCustomerOnVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("searchEventNo", CommonUtil.isNull(boardCustomerOnVO.getSearchEventNo(), ""));
 
@@ -231,40 +227,5 @@ public class BoardCustomerOnApi extends CORSFilter {
         jsonObject.put("retMsg", "OK");
 
         return new JSONObject(jsonObject);
-    }
-
-    /**
-     * 파라미터 설정
-     */
-    @SuppressWarnings("unchecked")
-    private void setParam(HashMap<String, String> params, HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-
-        if (session == null) {
-            params.put("USER_ID", "");
-            params.put("USER_NM", "");
-            params.put("REG_ID", "");
-            params.put("UPD_ID", "");
-            params.put("ISLOGIN", "N");
-        } else {
-            HashMap<String, String> loginInfo = (HashMap<String, String>) session.getAttribute("userInfo");
-            if (loginInfo != null && !loginInfo.isEmpty()) {
-                params.put("USER_ID", loginInfo.get("USER_ID"));
-                params.put("USER_NM", loginInfo.get("USER_NM"));
-                params.put("USER_ROLE", loginInfo.get("USER_ROLE"));
-                params.put("REG_ID", loginInfo.get("USER_ID"));
-                params.put("UPD_ID", loginInfo.get("USER_ID"));
-                params.put("ISLOGIN", "Y");
-            } else {
-                params.put("USER_ID", "");
-                params.put("USER_NM", "");
-                params.put("REG_ID", "");
-                params.put("UPD_ID", "");
-                params.put("ISLOGIN", "N");
-            }
-        }
-
-        params.put("topMenuType", CommonUtil.isNull(request.getParameter("topMenuType"), "O"));
-        params.put("topMenu", CommonUtil.isNull(request.getParameter("topMenu"), "MAIN"));
     }
 }

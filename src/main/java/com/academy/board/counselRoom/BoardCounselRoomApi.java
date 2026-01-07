@@ -7,8 +7,6 @@ import com.academy.common.CommonUtil;
 import com.academy.common.PaginationInfo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,11 +40,9 @@ public class BoardCounselRoomApi extends CORSFilter {
     @Operation(summary = "상담실 게시판 목록 조회", description = "상담실 게시판 목록을 페이징하여 조회합니다.")
     @GetMapping("/getList")
     public JSONObject getList(
-            @ModelAttribute("BoardCounselRoomVO") BoardCounselRoomVO boardCounselRoomVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardCounselRoomVO") BoardCounselRoomVO boardCounselRoomVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardCounselRoomVO.getBoardMngSeq(), ""));
         params.put("SEARCHTEXT", CommonUtil.isNull(boardCounselRoomVO.getSearchText(), ""));
@@ -86,11 +82,9 @@ public class BoardCounselRoomApi extends CORSFilter {
     @Operation(summary = "게시물 상세 조회", description = "상담 게시물 상세 정보를 조회합니다.")
     @GetMapping("/getView")
     public JSONObject getView(
-            @ModelAttribute("BoardCounselRoomVO") BoardCounselRoomVO boardCounselRoomVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardCounselRoomVO") BoardCounselRoomVO boardCounselRoomVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("BOARD_SEQ", CommonUtil.isNull(boardCounselRoomVO.getBoardSeq(), ""));
         params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardCounselRoomVO.getBoardMngSeq(), ""));
@@ -133,12 +127,14 @@ public class BoardCounselRoomApi extends CORSFilter {
     @Operation(summary = "게시물 등록", description = "상담 게시물을 등록합니다.")
     @PostMapping("/insert")
     public JSONObject insert(
-            @ModelAttribute("BoardCounselRoomVO") BoardCounselRoomVO boardCounselRoomVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardCounselRoomVO") BoardCounselRoomVO boardCounselRoomVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
+        String userId = CommonUtil.isNull(boardCounselRoomVO.getUserId(), "");
+        params.put("USER_ID", userId);
+        params.put("REG_ID", userId);
+        params.put("UPD_ID", userId);
         params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardCounselRoomVO.getBoardMngSeq(), ""));
         params.put("SUBJECT", CommonUtil.isNull(boardCounselRoomVO.getSubject(), ""));
         params.put("CONTENT", CommonUtil.isNull(boardCounselRoomVO.getContent(), ""));
@@ -166,12 +162,13 @@ public class BoardCounselRoomApi extends CORSFilter {
     @Operation(summary = "게시물 수정", description = "상담 게시물을 수정합니다.")
     @PostMapping("/update")
     public JSONObject update(
-            @ModelAttribute("BoardCounselRoomVO") BoardCounselRoomVO boardCounselRoomVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardCounselRoomVO") BoardCounselRoomVO boardCounselRoomVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
+        String userId = CommonUtil.isNull(boardCounselRoomVO.getUserId(), "");
+        params.put("USER_ID", userId);
+        params.put("UPD_ID", userId);
         params.put("BOARD_SEQ", CommonUtil.isNull(boardCounselRoomVO.getBoardSeq(), ""));
         params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardCounselRoomVO.getBoardMngSeq(), ""));
         params.put("SUBJECT", CommonUtil.isNull(boardCounselRoomVO.getSubject(), ""));
@@ -198,12 +195,13 @@ public class BoardCounselRoomApi extends CORSFilter {
     @Operation(summary = "게시물 삭제", description = "상담 게시물을 삭제합니다.")
     @PostMapping("/delete")
     public JSONObject delete(
-            @ModelAttribute("BoardCounselRoomVO") BoardCounselRoomVO boardCounselRoomVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardCounselRoomVO") BoardCounselRoomVO boardCounselRoomVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
+        String userId = CommonUtil.isNull(boardCounselRoomVO.getUserId(), "");
+        params.put("USER_ID", userId);
+        params.put("UPD_ID", userId);
         params.put("BOARD_SEQ", CommonUtil.isNull(boardCounselRoomVO.getBoardSeq(), ""));
         params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardCounselRoomVO.getBoardMngSeq(), ""));
 
@@ -226,12 +224,14 @@ public class BoardCounselRoomApi extends CORSFilter {
     @Operation(summary = "답변 등록", description = "상담 게시물에 답변을 등록합니다.")
     @PostMapping("/insertReply")
     public JSONObject insertReply(
-            @ModelAttribute("BoardCounselRoomVO") BoardCounselRoomVO boardCounselRoomVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardCounselRoomVO") BoardCounselRoomVO boardCounselRoomVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
+        String userId = CommonUtil.isNull(boardCounselRoomVO.getUserId(), "");
+        params.put("USER_ID", userId);
+        params.put("REG_ID", userId);
+        params.put("UPD_ID", userId);
         params.put("BOARD_SEQ", CommonUtil.isNull(boardCounselRoomVO.getBoardSeq(), ""));
         params.put("PARENT_BOARD_SEQ", CommonUtil.isNull(boardCounselRoomVO.getParentBoardSeq(), ""));
         params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardCounselRoomVO.getBoardMngSeq(), ""));
@@ -257,12 +257,13 @@ public class BoardCounselRoomApi extends CORSFilter {
     @Operation(summary = "답변 수정", description = "상담 게시물의 답변을 수정합니다.")
     @PostMapping("/updateReply")
     public JSONObject updateReply(
-            @ModelAttribute("BoardCounselRoomVO") BoardCounselRoomVO boardCounselRoomVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardCounselRoomVO") BoardCounselRoomVO boardCounselRoomVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
+        String userId = CommonUtil.isNull(boardCounselRoomVO.getUserId(), "");
+        params.put("USER_ID", userId);
+        params.put("UPD_ID", userId);
         params.put("BOARD_SEQ", CommonUtil.isNull(boardCounselRoomVO.getBoardSeq(), ""));
         params.put("SUBJECT", CommonUtil.isNull(boardCounselRoomVO.getSubject(), ""));
         params.put("CONTENT", CommonUtil.isNull(boardCounselRoomVO.getContent(), ""));
@@ -278,40 +279,5 @@ public class BoardCounselRoomApi extends CORSFilter {
         }
 
         return new JSONObject(jsonObject);
-    }
-
-    /**
-     * 파라미터 설정
-     */
-    @SuppressWarnings("unchecked")
-    private void setParam(HashMap<String, String> params, HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-
-        if (session == null) {
-            params.put("USER_ID", "");
-            params.put("USER_NM", "");
-            params.put("REG_ID", "");
-            params.put("UPD_ID", "");
-            params.put("ISLOGIN", "N");
-        } else {
-            HashMap<String, String> loginInfo = (HashMap<String, String>) session.getAttribute("userInfo");
-            if (loginInfo != null && !loginInfo.isEmpty()) {
-                params.put("USER_ID", loginInfo.get("USER_ID"));
-                params.put("USER_NM", loginInfo.get("USER_NM"));
-                params.put("USER_ROLE", loginInfo.get("USER_ROLE"));
-                params.put("REG_ID", loginInfo.get("USER_ID"));
-                params.put("UPD_ID", loginInfo.get("USER_ID"));
-                params.put("ISLOGIN", "Y");
-            } else {
-                params.put("USER_ID", "");
-                params.put("USER_NM", "");
-                params.put("REG_ID", "");
-                params.put("UPD_ID", "");
-                params.put("ISLOGIN", "N");
-            }
-        }
-
-        params.put("topMenuType", CommonUtil.isNull(request.getParameter("topMenuType"), "F"));
-        params.put("topMenu", CommonUtil.isNull(request.getParameter("topMenu"), "MAIN"));
     }
 }

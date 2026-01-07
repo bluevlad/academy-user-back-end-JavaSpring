@@ -7,8 +7,6 @@ import com.academy.book.service.BookService;
 import com.academy.book.service.BookVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,13 +40,11 @@ public class BookApi extends CORSFilter {
     @Operation(summary = "도서 리스트 조회", description = "도서 목록을 페이징하여 조회합니다.")
     @GetMapping("/getBookList")
     public JSONObject getBookList(
-            @ModelAttribute("BookVO") BookVO bookVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BookVO") BookVO bookVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
-        params.put("topMenu", CommonUtil.isNull(bookVO.getTopMenu(), params.get("topMenu")));
+        params.put("topMenu", CommonUtil.isNull(bookVO.getTopMenu(), "001"));
         params.put("SEARCHFORM", CommonUtil.isNull(bookVO.getSearchForm(), ""));
         params.put("SEARCHKIND", CommonUtil.isNull(bookVO.getSearchKind(), ""));
         params.put("SEARCHSTJCODE", CommonUtil.isNull(bookVO.getSearchStjCode(), ""));
@@ -92,11 +88,9 @@ public class BookApi extends CORSFilter {
     @Operation(summary = "도서 상세 조회", description = "도서 상세 정보를 조회합니다.")
     @GetMapping("/getBookDetail")
     public JSONObject getBookDetail(
-            @ModelAttribute("BookVO") BookVO bookVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BookVO") BookVO bookVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("RSC_ID", bookVO.getRscId());
 
@@ -117,11 +111,9 @@ public class BookApi extends CORSFilter {
     @Operation(summary = "도서 관련 정보 조회", description = "동일 SEQ의 도서 목록을 조회합니다.")
     @GetMapping("/getBookViewList")
     public JSONObject getBookViewList(
-            @ModelAttribute("BookVO") BookVO bookVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BookVO") BookVO bookVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("SEQ", bookVO.getSeq());
 
@@ -140,11 +132,9 @@ public class BookApi extends CORSFilter {
     @Operation(summary = "학습형태 리스트 조회", description = "좌측 메뉴용 학습형태 목록을 조회합니다.")
     @GetMapping("/getLeftFormList")
     public JSONObject getLeftFormList(
-            @ModelAttribute("BookVO") BookVO bookVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BookVO") BookVO bookVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         List<HashMap<String, Object>> resultList = bookService.leftFormList(params);
 
@@ -161,13 +151,11 @@ public class BookApi extends CORSFilter {
     @Operation(summary = "좌측 교수 리스트 조회", description = "좌측 메뉴용 교수 목록을 조회합니다.")
     @GetMapping("/getLeftTeacherList")
     public JSONObject getLeftTeacherList(
-            @ModelAttribute("BookVO") BookVO bookVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BookVO") BookVO bookVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
-        params.put("topMenu", CommonUtil.isNull(bookVO.getTopMenu(), params.get("topMenu")));
+        params.put("topMenu", CommonUtil.isNull(bookVO.getTopMenu(), "001"));
         params.put("topMenuType", CommonUtil.isNull(bookVO.getTopMenuType(), "O"));
         params.put("SEARCHSERIESCODE", CommonUtil.isNull(bookVO.getSearchSeriesCode(), ""));
 
@@ -186,13 +174,11 @@ public class BookApi extends CORSFilter {
     @Operation(summary = "교수 리스트 조회", description = "도서 관련 교수 목록을 조회합니다.")
     @GetMapping("/getTeacherList")
     public JSONObject getTeacherList(
-            @ModelAttribute("BookVO") BookVO bookVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BookVO") BookVO bookVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
-        params.put("topMenu", CommonUtil.isNull(bookVO.getTopMenu(), params.get("topMenu")));
+        params.put("topMenu", CommonUtil.isNull(bookVO.getTopMenu(), "001"));
         params.put("topMenuType", CommonUtil.isNull(bookVO.getTopMenuType(), "O"));
         params.put("SEARCHSERIESCODE", CommonUtil.isNull(bookVO.getSearchSeriesCode(), ""));
         params.put("SEARCHSUBJECTCODE", CommonUtil.isNull(bookVO.getSearchSubjectCode(), ""));
@@ -214,11 +200,9 @@ public class BookApi extends CORSFilter {
     @Operation(summary = "학습형태 리스트 조회", description = "학습형태 목록을 조회합니다.")
     @GetMapping("/getLearningFormList")
     public JSONObject getLearningFormList(
-            @ModelAttribute("BookVO") BookVO bookVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BookVO") BookVO bookVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         List<HashMap<String, Object>> resultList = bookService.getLearningFormList(params);
 
@@ -235,11 +219,9 @@ public class BookApi extends CORSFilter {
     @Operation(summary = "과목-교수 리스트 조회", description = "과목별 교수 목록을 조회합니다.")
     @GetMapping("/getCaSubjectTeacherList")
     public JSONObject getCaSubjectTeacherList(
-            @ModelAttribute("BookVO") BookVO bookVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BookVO") BookVO bookVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("RSC_ID", CommonUtil.isNull(bookVO.getRscId(), ""));
         params.put("LECCODE", CommonUtil.isNull(bookVO.getLecCode(), ""));
@@ -259,14 +241,12 @@ public class BookApi extends CORSFilter {
     @Operation(summary = "도서 연관 강의 리스트 조회", description = "도서와 연관된 강의 목록을 조회합니다.")
     @GetMapping("/getBookLectureList")
     public JSONObject getBookLectureList(
-            @ModelAttribute("BookVO") BookVO bookVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BookVO") BookVO bookVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("RSC_ID", CommonUtil.isNull(bookVO.getRscId(), ""));
-        params.put("topMenu", CommonUtil.isNull(bookVO.getTopMenu(), params.get("topMenu")));
+        params.put("topMenu", CommonUtil.isNull(bookVO.getTopMenu(), "001"));
 
         List<HashMap<String, Object>> resultList = bookService.bookLectureList(params);
 
@@ -283,11 +263,9 @@ public class BookApi extends CORSFilter {
     @Operation(summary = "도서 장바구니 담기", description = "도서를 장바구니에 담습니다.")
     @PostMapping("/addToCart")
     public JSONObject addToCart(
-            @ModelAttribute("BookVO") BookVO bookVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BookVO") BookVO bookVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("RSC_ID", CommonUtil.isNull(bookVO.getRscId(), ""));
         params.put("KIND_TYPE", CommonUtil.isNull(bookVO.getKindType(), "B"));
@@ -296,12 +274,14 @@ public class BookApi extends CORSFilter {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
-        String userId = params.get("USER_ID");
+        String userId = bookVO.getUserId();
         if (userId == null || userId.isEmpty()) {
             jsonObject.put("retMsg", "FAIL");
             jsonObject.put("message", "로그인이 필요합니다.");
             return new JSONObject(jsonObject);
         }
+
+        params.put("USER_ID", userId);
 
         try {
             // 장바구니 중복 체크
@@ -335,11 +315,9 @@ public class BookApi extends CORSFilter {
     @Operation(summary = "과목 정보 조회", description = "과목 상세 정보를 조회합니다.")
     @GetMapping("/getSubjectInfo")
     public JSONObject getSubjectInfo(
-            @ModelAttribute("BookVO") BookVO bookVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BookVO") BookVO bookVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("SEARCHSUBJECTCODE", bookVO.getSearchSubjectCode());
 
@@ -350,28 +328,6 @@ public class BookApi extends CORSFilter {
         jsonObject.put("retMsg", "OK");
 
         return new JSONObject(jsonObject);
-    }
-
-    /**
-     * 파라미터 설정
-     */
-    @SuppressWarnings("unchecked")
-    private void setParam(HashMap<String, String> params, HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-
-        if (session == null) {
-            params.put("USER_ID", "");
-        } else {
-            HashMap<String, String> loginInfo = (HashMap<String, String>) session.getAttribute("userInfo");
-            if (loginInfo != null && !loginInfo.isEmpty()) {
-                params.put("USER_ID", loginInfo.get("USER_ID"));
-            } else {
-                params.put("USER_ID", "");
-            }
-        }
-
-        params.put("topMenuType", CommonUtil.isNull(request.getParameter("topMenuType"), "O"));
-        params.put("topMenu", CommonUtil.isNull(request.getParameter("topMenu"), "001"));
     }
 
 }

@@ -6,8 +6,6 @@ import com.academy.survey.service.SurveyService;
 import com.academy.survey.service.SurveyVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -38,11 +36,9 @@ public class SurveyApi extends CORSFilter {
     @Operation(summary = "설문조사 목록 조회", description = "활성화된 설문조사 목록을 조회합니다.")
     @GetMapping("/getList")
     public JSONObject getList(
-            @ModelAttribute("SurveyVO") SurveyVO surveyVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("SurveyVO") SurveyVO surveyVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         List<HashMap<String, Object>> surveyList = surveyService.surveyList(params);
 
@@ -60,11 +56,9 @@ public class SurveyApi extends CORSFilter {
     @Operation(summary = "설문조사 상세 조회", description = "설문조사 상세 정보와 질문 목록을 조회합니다.")
     @GetMapping("/getView")
     public JSONObject getView(
-            @ModelAttribute("SurveyVO") SurveyVO surveyVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("SurveyVO") SurveyVO surveyVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("SURVEYID", CommonUtil.isNull(surveyVO.getSurveyId(), ""));
 
@@ -91,11 +85,9 @@ public class SurveyApi extends CORSFilter {
     @Operation(summary = "설문조사 결과 통계 조회", description = "설문조사 결과 통계를 조회합니다.")
     @GetMapping("/getResult")
     public JSONObject getResult(
-            @ModelAttribute("SurveyVO") SurveyVO surveyVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("SurveyVO") SurveyVO surveyVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("SURVEYID", CommonUtil.isNull(surveyVO.getSurveyId(), ""));
 
@@ -116,22 +108,22 @@ public class SurveyApi extends CORSFilter {
     @Operation(summary = "설문조사 참여 여부 확인", description = "사용자의 설문조사 참여 여부를 확인합니다.")
     @GetMapping("/checkParticipation")
     public JSONObject checkParticipation(
-            @ModelAttribute("SurveyVO") SurveyVO surveyVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("SurveyVO") SurveyVO surveyVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("SURVEYID", CommonUtil.isNull(surveyVO.getSurveyId(), ""));
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
-        String userId = (String) params.get("USER_ID");
+        String userId = surveyVO.getUserId();
         if (userId == null || userId.isEmpty()) {
             jsonObject.put("retMsg", "FAIL");
             jsonObject.put("message", "로그인이 필요합니다.");
             return new JSONObject(jsonObject);
         }
+
+        params.put("USER_ID", userId);
 
         int count = surveyService.checkSurveyCnt(params);
 
@@ -153,11 +145,9 @@ public class SurveyApi extends CORSFilter {
     @Operation(summary = "설문조사 참여", description = "설문조사에 참여하여 응답을 제출합니다.")
     @PostMapping("/submit")
     public JSONObject submit(
-            @RequestBody HashMap<String, Object> requestBody,
-            HttpServletRequest request) throws Exception {
+            @RequestBody HashMap<String, Object> requestBody) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         String surveyId = CommonUtil.isNull((String) requestBody.get("surveyId"), "");
         params.put("SURVEYID", surveyId);
@@ -165,12 +155,14 @@ public class SurveyApi extends CORSFilter {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
-        String userId = (String) params.get("USER_ID");
+        String userId = (String) requestBody.get("userId");
         if (userId == null || userId.isEmpty()) {
             jsonObject.put("retMsg", "FAIL");
             jsonObject.put("message", "로그인이 필요합니다.");
             return new JSONObject(jsonObject);
         }
+
+        params.put("USER_ID", userId);
 
         // 중복 참여 체크
         int count = surveyService.checkSurveyCnt(params);
@@ -211,36 +203,5 @@ public class SurveyApi extends CORSFilter {
         }
 
         return new JSONObject(jsonObject);
-    }
-
-    /**
-     * 파라미터 설정
-     */
-    @SuppressWarnings("unchecked")
-    private void setParam(HashMap<String, Object> params, HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-
-        if (session == null) {
-            params.put("USER_ID", "");
-            params.put("USER_NM", "");
-            params.put("REG_ID", "");
-            params.put("UPD_ID", "");
-            params.put("ISLOGIN", "N");
-        } else {
-            HashMap<String, String> loginInfo = (HashMap<String, String>) session.getAttribute("userInfo");
-            if (loginInfo != null && !loginInfo.isEmpty()) {
-                params.put("USER_ID", loginInfo.get("USER_ID"));
-                params.put("USER_NM", loginInfo.get("USER_NM"));
-                params.put("REG_ID", loginInfo.get("USER_ID"));
-                params.put("UPD_ID", loginInfo.get("USER_ID"));
-                params.put("ISLOGIN", "Y");
-            } else {
-                params.put("USER_ID", "");
-                params.put("USER_NM", "");
-                params.put("REG_ID", "");
-                params.put("UPD_ID", "");
-                params.put("ISLOGIN", "N");
-            }
-        }
     }
 }

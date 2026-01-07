@@ -6,8 +6,6 @@ import com.academy.index.service.IndexService;
 import com.academy.index.service.IndexVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -37,11 +35,9 @@ public class IndexApi extends CORSFilter {
     @Operation(summary = "카테고리 목록 조회", description = "직종 카테고리 목록을 조회합니다.")
     @GetMapping("/getCategory")
     public JSONObject getCategory(
-            @ModelAttribute("IndexVO") IndexVO indexVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("IndexVO") IndexVO indexVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("topMenuType", CommonUtil.isNull(indexVO.getTopMenuType(), "O"));
 
@@ -60,11 +56,9 @@ public class IndexApi extends CORSFilter {
     @Operation(summary = "과목 목록 조회", description = "카테고리별 과목 목록을 조회합니다.")
     @GetMapping("/getSubjectList")
     public JSONObject getSubjectList(
-            @ModelAttribute("IndexVO") IndexVO indexVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("IndexVO") IndexVO indexVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("CATEGORY_CD", CommonUtil.isNull(indexVO.getCategoryCd(), ""));
 
@@ -83,11 +77,9 @@ public class IndexApi extends CORSFilter {
     @Operation(summary = "강좌 목록 조회", description = "과목별 강좌 목록을 조회합니다.")
     @GetMapping("/getLectureList")
     public JSONObject getLectureList(
-            @ModelAttribute("IndexVO") IndexVO indexVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("IndexVO") IndexVO indexVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("CATEGORY_CD", CommonUtil.isNull(indexVO.getCategoryCd(), ""));
         params.put("SUBJECT_SJT_CD", CommonUtil.isNull(indexVO.getSubjectCd(), ""));
@@ -107,11 +99,9 @@ public class IndexApi extends CORSFilter {
     @Operation(summary = "메인 공지사항 조회", description = "메인 페이지용 공지사항 목록을 조회합니다.")
     @GetMapping("/getMainNotice")
     public JSONObject getMainNotice(
-            @ModelAttribute("IndexVO") IndexVO indexVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("IndexVO") IndexVO indexVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("BOARD_MNG_SEQ", CommonUtil.isNull(indexVO.getBoardMngSeq(), "NOTICE_000"));
 
@@ -130,11 +120,9 @@ public class IndexApi extends CORSFilter {
     @Operation(summary = "메인 추천 공지 조회", description = "메인 페이지용 추천 공지 목록을 조회합니다.")
     @GetMapping("/getMainRecommendNotice")
     public JSONObject getMainRecommendNotice(
-            @ModelAttribute("IndexVO") IndexVO indexVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("IndexVO") IndexVO indexVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("BOARD_MNG_SEQ", CommonUtil.isNull(indexVO.getBoardMngSeq(), "NOTICE_000"));
 
@@ -153,11 +141,9 @@ public class IndexApi extends CORSFilter {
     @Operation(summary = "카테고리별 동영상 과목 조회", description = "카테고리별 동영상 강의 과목 목록을 조회합니다.")
     @GetMapping("/getMovieSubjectByCategory")
     public JSONObject getMovieSubjectByCategory(
-            @ModelAttribute("IndexVO") IndexVO indexVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("IndexVO") IndexVO indexVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("topMenu", CommonUtil.isNull(indexVO.getTopMenu(), ""));
         params.put("topMenuType", CommonUtil.isNull(indexVO.getTopMenuType(), "O"));
@@ -178,11 +164,9 @@ public class IndexApi extends CORSFilter {
     @Operation(summary = "과목별 동영상 강사 조회", description = "과목별 동영상 강의 강사 목록을 조회합니다.")
     @GetMapping("/getMovieTeacherBySubject")
     public JSONObject getMovieTeacherBySubject(
-            @ModelAttribute("IndexVO") IndexVO indexVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("IndexVO") IndexVO indexVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("topMenu", CommonUtil.isNull(indexVO.getTopMenu(), ""));
 
@@ -201,11 +185,9 @@ public class IndexApi extends CORSFilter {
     @Operation(summary = "시험 D-Day 조회", description = "시험 D-Day 목록을 조회합니다.")
     @GetMapping("/getExamDday")
     public JSONObject getExamDday(
-            @ModelAttribute("IndexVO") IndexVO indexVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("IndexVO") IndexVO indexVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("topMenu", CommonUtil.isNull(indexVO.getTopMenu(), "MAIN"));
 
@@ -224,11 +206,9 @@ public class IndexApi extends CORSFilter {
     @Operation(summary = "신간 도서 목록 조회", description = "신간 도서 목록을 조회합니다.")
     @GetMapping("/getNewBookList")
     public JSONObject getNewBookList(
-            @ModelAttribute("IndexVO") IndexVO indexVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("IndexVO") IndexVO indexVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("BOOKTYPE", CommonUtil.isNull(indexVO.getBookType(), "NEW"));
 
@@ -247,11 +227,9 @@ public class IndexApi extends CORSFilter {
     @Operation(summary = "교수 과목 목록 조회", description = "교수 과목 목록을 조회합니다.")
     @GetMapping("/getTeacherSubject")
     public JSONObject getTeacherSubject(
-            @ModelAttribute("IndexVO") IndexVO indexVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("IndexVO") IndexVO indexVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         List<HashMap<String, Object>> subjectList = indexService.getTeacherSubject(params);
 
@@ -268,11 +246,9 @@ public class IndexApi extends CORSFilter {
     @Operation(summary = "교수 목록 조회", description = "교수 목록을 조회합니다.")
     @GetMapping("/getTeacherList")
     public JSONObject getTeacherList(
-            @ModelAttribute("IndexVO") IndexVO indexVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("IndexVO") IndexVO indexVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("topMenuType", CommonUtil.isNull(indexVO.getTopMenuType(), "O"));
 
@@ -293,11 +269,9 @@ public class IndexApi extends CORSFilter {
     @Operation(summary = "이슈 목록 조회", description = "이슈 목록(이벤트+공지)을 조회합니다.")
     @GetMapping("/getIssueList")
     public JSONObject getIssueList(
-            @ModelAttribute("IndexVO") IndexVO indexVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("IndexVO") IndexVO indexVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("topMenu", CommonUtil.isNull(indexVO.getTopMenu(), ""));
 
@@ -316,11 +290,9 @@ public class IndexApi extends CORSFilter {
     @Operation(summary = "서브메인 강좌 목록 조회", description = "서브메인 페이지용 강좌 목록을 조회합니다.")
     @GetMapping("/getSubMainLectureList")
     public JSONObject getSubMainLectureList(
-            @ModelAttribute("IndexVO") IndexVO indexVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("IndexVO") IndexVO indexVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("topMenu", CommonUtil.isNull(indexVO.getTopMenu(), ""));
         params.put("SUBLECTYPE", CommonUtil.isNull(indexVO.getSubLecType(), ""));
@@ -340,11 +312,9 @@ public class IndexApi extends CORSFilter {
     @Operation(summary = "팝업 목록 조회", description = "활성화된 팝업 목록을 조회합니다.")
     @GetMapping("/getPopupList")
     public JSONObject getPopupList(
-            @ModelAttribute("IndexVO") IndexVO indexVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("IndexVO") IndexVO indexVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("topMenuType", CommonUtil.isNull(indexVO.getTopMenuType(), "O"));
         params.put("topMenu", CommonUtil.isNull(indexVO.getTopMenu(), "MAIN"));
@@ -364,11 +334,9 @@ public class IndexApi extends CORSFilter {
     @Operation(summary = "팝업 조회수 증가", description = "팝업 조회수를 증가시킵니다.")
     @PostMapping("/updatePopupViewCount")
     public JSONObject updatePopupViewCount(
-            @ModelAttribute("IndexVO") IndexVO indexVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("IndexVO") IndexVO indexVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("SEQ", CommonUtil.isNull(indexVO.getSeq(), ""));
 
@@ -390,11 +358,9 @@ public class IndexApi extends CORSFilter {
     @Operation(summary = "배너 목록 조회", description = "활성화된 배너 목록을 조회합니다.")
     @GetMapping("/getBannerList")
     public JSONObject getBannerList(
-            @ModelAttribute("IndexVO") IndexVO indexVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("IndexVO") IndexVO indexVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("topMenuType", CommonUtil.isNull(indexVO.getTopMenuType(), "O"));
         params.put("topMenu", CommonUtil.isNull(indexVO.getTopMenu(), "MAIN"));
@@ -417,11 +383,9 @@ public class IndexApi extends CORSFilter {
     @Operation(summary = "배너 클릭수 증가", description = "배너 클릭수를 증가시킵니다.")
     @PostMapping("/updateBannerViewCount")
     public JSONObject updateBannerViewCount(
-            @ModelAttribute("IndexVO") IndexVO indexVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("IndexVO") IndexVO indexVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("SEQ", CommonUtil.isNull(indexVO.getBannerSeq(), ""));
 
@@ -439,40 +403,5 @@ public class IndexApi extends CORSFilter {
         }
 
         return new JSONObject(jsonObject);
-    }
-
-    /**
-     * 파라미터 설정
-     */
-    @SuppressWarnings("unchecked")
-    private void setParam(HashMap<String, Object> params, HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-
-        if (session == null) {
-            params.put("USER_ID", "");
-            params.put("USER_NM", "");
-            params.put("REG_ID", "");
-            params.put("UPD_ID", "");
-            params.put("ISLOGIN", "N");
-        } else {
-            HashMap<String, String> loginInfo = (HashMap<String, String>) session.getAttribute("userInfo");
-            if (loginInfo != null && !loginInfo.isEmpty()) {
-                params.put("USER_ID", loginInfo.get("USER_ID"));
-                params.put("USER_NM", loginInfo.get("USER_NM"));
-                params.put("USER_ROLE", loginInfo.get("USER_ROLE"));
-                params.put("REG_ID", loginInfo.get("USER_ID"));
-                params.put("UPD_ID", loginInfo.get("USER_ID"));
-                params.put("ISLOGIN", "Y");
-            } else {
-                params.put("USER_ID", "");
-                params.put("USER_NM", "");
-                params.put("REG_ID", "");
-                params.put("UPD_ID", "");
-                params.put("ISLOGIN", "N");
-            }
-        }
-
-        params.put("topMenuType", CommonUtil.isNull(request.getParameter("topMenuType"), "O"));
-        params.put("topMenu", CommonUtil.isNull(request.getParameter("topMenu"), "MAIN"));
     }
 }

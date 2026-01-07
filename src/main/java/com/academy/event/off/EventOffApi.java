@@ -7,8 +7,6 @@ import com.academy.event.off.service.EventOffService;
 import com.academy.event.off.service.EventOffVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,11 +40,9 @@ public class EventOffApi extends CORSFilter {
     @Operation(summary = "오프라인 이벤트 목록 조회", description = "오프라인 이벤트(설명회) 목록을 조회합니다.")
     @GetMapping("/getList")
     public JSONObject getList(
-            @ModelAttribute("EventOffVO") EventOffVO eventOffVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("EventOffVO") EventOffVO eventOffVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("SEARCHKIND", CommonUtil.isNull(eventOffVO.getSearchKind(), ""));
         params.put("SEARCHTEXT", CommonUtil.isNull(eventOffVO.getSearchText(), ""));
@@ -84,14 +80,17 @@ public class EventOffApi extends CORSFilter {
     @Operation(summary = "오프라인 이벤트 상세 조회", description = "오프라인 이벤트(설명회) 상세 정보를 조회합니다.")
     @GetMapping("/getView")
     public JSONObject getView(
-            @ModelAttribute("EventOffVO") EventOffVO eventOffVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("EventOffVO") EventOffVO eventOffVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         String eventNo = CommonUtil.isNull(eventOffVO.getEventNo(), "");
         params.put("EVENT_NO", eventNo);
+
+        String userId = eventOffVO.getUserId();
+        String isLogin = (userId != null && !userId.isEmpty()) ? "Y" : "N";
+        params.put("USER_ID", CommonUtil.isNull(userId, ""));
+        params.put("ISLOGIN", isLogin);
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
@@ -107,7 +106,7 @@ public class EventOffApi extends CORSFilter {
 
         // 사용자 참여 정보 조회
         HashMap<String, Object> userResult = null;
-        if ("Y".equals(params.get("ISLOGIN"))) {
+        if ("Y".equals(isLogin)) {
             userResult = eventOffService.getOffEventResult(params);
         }
 
@@ -131,11 +130,9 @@ public class EventOffApi extends CORSFilter {
     @Operation(summary = "오프라인 이벤트 참여 신청", description = "오프라인 이벤트(설명회)에 참여 신청합니다.")
     @PostMapping("/join")
     public JSONObject join(
-            @ModelAttribute("EventOffVO") EventOffVO eventOffVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("EventOffVO") EventOffVO eventOffVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("EVENT_NO", CommonUtil.isNull(eventOffVO.getEventNo(), ""));
         params.put("OPTION1_SEQ", CommonUtil.isNull(eventOffVO.getOption1Seq(), ""));
@@ -146,12 +143,14 @@ public class EventOffApi extends CORSFilter {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
-        String userId = (String) params.get("USER_ID");
+        String userId = eventOffVO.getUserId();
         if (userId == null || userId.isEmpty()) {
             jsonObject.put("retMsg", "FAIL");
             jsonObject.put("message", "로그인이 필요합니다.");
             return new JSONObject(jsonObject);
         }
+
+        params.put("USER_ID", userId);
 
         try {
             // 중복 참여 체크
@@ -179,22 +178,22 @@ public class EventOffApi extends CORSFilter {
     @Operation(summary = "오프라인 이벤트 참여 취소", description = "오프라인 이벤트(설명회) 참여를 취소합니다.")
     @PostMapping("/cancel")
     public JSONObject cancel(
-            @ModelAttribute("EventOffVO") EventOffVO eventOffVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("EventOffVO") EventOffVO eventOffVO) throws Exception {
 
         HashMap<String, Object> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("EVENT_NO", CommonUtil.isNull(eventOffVO.getEventNo(), ""));
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 
-        String userId = (String) params.get("USER_ID");
+        String userId = eventOffVO.getUserId();
         if (userId == null || userId.isEmpty()) {
             jsonObject.put("retMsg", "FAIL");
             jsonObject.put("message", "로그인이 필요합니다.");
             return new JSONObject(jsonObject);
         }
+
+        params.put("USER_ID", userId);
 
         try {
             eventOffService.deleteOffEventResult(params);
@@ -208,34 +207,4 @@ public class EventOffApi extends CORSFilter {
         return new JSONObject(jsonObject);
     }
 
-    /**
-     * 파라미터 설정
-     */
-    @SuppressWarnings("unchecked")
-    private void setParam(HashMap<String, Object> params, HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-
-        if (session == null) {
-            params.put("USER_ID", "");
-            params.put("USER_NM", "");
-            params.put("REG_ID", "");
-            params.put("UPD_ID", "");
-            params.put("ISLOGIN", "N");
-        } else {
-            HashMap<String, String> loginInfo = (HashMap<String, String>) session.getAttribute("userInfo");
-            if (loginInfo != null && !loginInfo.isEmpty()) {
-                params.put("USER_ID", loginInfo.get("USER_ID"));
-                params.put("USER_NM", loginInfo.get("USER_NM"));
-                params.put("REG_ID", loginInfo.get("USER_ID"));
-                params.put("UPD_ID", loginInfo.get("USER_ID"));
-                params.put("ISLOGIN", "Y");
-            } else {
-                params.put("USER_ID", "");
-                params.put("USER_NM", "");
-                params.put("REG_ID", "");
-                params.put("UPD_ID", "");
-                params.put("ISLOGIN", "N");
-            }
-        }
-    }
 }
