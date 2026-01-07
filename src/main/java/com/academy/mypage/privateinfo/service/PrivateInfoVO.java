@@ -24,8 +24,17 @@ public class PrivateInfoVO extends CommonVO {
     private String loginCount;
     private String profileImage;
     private String introduce;
+    private String marketingAgree;
 
     // Getters and Setters
+    public String getMarketingAgree() {
+        return marketingAgree;
+    }
+
+    public void setMarketingAgree(String marketingAgree) {
+        this.marketingAgree = marketingAgree;
+    }
+
     public String getUserNm() {
         return userNm;
     }
@@ -82,11 +91,27 @@ public class PrivateInfoVO extends CommonVO {
         this.addr1 = addr1;
     }
 
+    public String getAddress() {
+        return addr1;
+    }
+
+    public void setAddress(String addr1) {
+        this.addr1 = addr1;
+    }
+
     public String getAddr2() {
         return addr2;
     }
 
     public void setAddr2(String addr2) {
+        this.addr2 = addr2;
+    }
+
+    public String getAddressDetail() {
+        return addr2;
+    }
+
+    public void setAddressDetail(String addr2) {
         this.addr2 = addr2;
     }
 

@@ -2,7 +2,7 @@ package com.academy.mypage.pay.service;
 
 import com.academy.common.CommonVO;
 
-public class PayVO extends CommonVO {
+public class MypagePayVO extends CommonVO {
     private static final long serialVersionUID = 1L;
 
     private String orderNo;
@@ -29,8 +29,44 @@ public class PayVO extends CommonVO {
     private String refundBank;
     private String refundAccount;
     private String refundHolder;
+    private String deliveryMemo;
+    private String deliveryAddress;
+    private String deliveryPhone;
+    private String deliveryName;
 
     // Getters and Setters
+    public String getDeliveryName() {
+        return deliveryName;
+    }
+
+    public void setDeliveryName(String deliveryName) {
+        this.deliveryName = deliveryName;
+    }
+
+    public String getDeliveryPhone() {
+        return deliveryPhone;
+    }
+
+    public void setDeliveryPhone(String deliveryPhone) {
+        this.deliveryPhone = deliveryPhone;
+    }
+
+    public String getDeliveryAddress() {
+        return deliveryAddress;
+    }
+
+    public void setDeliveryAddress(String deliveryAddress) {
+        this.deliveryAddress = deliveryAddress;
+    }
+
+    public String getDeliveryMemo() {
+        return deliveryMemo;
+    }
+
+    public void setDeliveryMemo(String deliveryMemo) {
+        this.deliveryMemo = deliveryMemo;
+    }
+
     public String getOrderNo() {
         return orderNo;
     }

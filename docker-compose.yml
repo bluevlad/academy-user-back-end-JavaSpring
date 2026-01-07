@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  academy-user-service:
+    build: .
+    container_name: academy-user-back-end-JavaSpring
+    ports:
+      - "8083:8080"
+    environment:
+      - SERVER_PORT=8080
+      # Override Spring Boot Datasource properties
+      - SPRING_DATASOURCE_URL=jdbc:mariadb://host.docker.internal:3306/acm_basic?useUnicode=true&characterEncoding=utf8&useSSL=false
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=password
+      # Specific props from application.properties (just in case)
+      - env.DB_HOST=host.docker.internal
+      - env.DB_PORT=3306
+      - env.DB_NAME=acm_basic
+      - env.DB_USERNAME=root
+      - env.DB_PASSWORD=password
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: always

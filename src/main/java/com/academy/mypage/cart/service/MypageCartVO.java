@@ -2,7 +2,7 @@ package com.academy.mypage.cart.service;
 
 import com.academy.common.CommonVO;
 
-public class CartVO extends CommonVO {
+public class MypageCartVO extends CommonVO {
     private static final long serialVersionUID = 1L;
 
     private String cartIdx;

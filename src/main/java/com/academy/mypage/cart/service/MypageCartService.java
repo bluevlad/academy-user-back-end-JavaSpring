@@ -8,15 +8,15 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 
-@Service
-public class CartService implements Serializable {
+@Service("mypageCartService")
+public class MypageCartService implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
     private final CartMapper cartMapper;
 
     @Autowired
-    public CartService(CartMapper cartMapper) {
+    public MypageCartService(CartMapper cartMapper) {
         this.cartMapper = cartMapper;
     }
 

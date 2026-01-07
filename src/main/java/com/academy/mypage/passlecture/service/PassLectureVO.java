@@ -6,7 +6,7 @@ public class PassLectureVO extends CommonVO {
     private static final long serialVersionUID = 1L;
 
     private String lecCode;
-    private String categoryC d;
+    private String categoryCd;
     private String learningCd;
     private String subjectTitle;
     private String subjectOpenDate;

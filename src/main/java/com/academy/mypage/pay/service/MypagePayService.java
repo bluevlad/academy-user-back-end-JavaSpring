@@ -8,15 +8,15 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 
-@Service
-public class PayService implements Serializable {
+@Service("mypagePayService")
+public class MypagePayService implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
     private final PayMapper payMapper;
 
     @Autowired
-    public PayService(PayMapper payMapper) {
+    public MypagePayService(PayMapper payMapper) {
         this.payMapper = payMapper;
     }
 
