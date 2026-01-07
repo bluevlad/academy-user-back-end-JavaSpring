@@ -7,8 +7,6 @@ import com.academy.teacher.service.TeacherService;
 import com.academy.teacher.service.TeacherVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,11 +40,9 @@ public class TeacherApi extends CORSFilter {
     @Operation(summary = "교수 리스트 조회", description = "카테고리별 교수 목록을 조회합니다.")
     @GetMapping("/getTeacherList")
     public JSONObject getTeacherList(
-            @ModelAttribute("TeacherVO") TeacherVO teacherVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("TeacherVO") TeacherVO teacherVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
 
         params.put("searchCategoryCode", CommonUtil.isNull(teacherVO.getSearchCategoryCode(), params.get("topMenu")));
         params.put("searchSubjectCode", CommonUtil.isNull(teacherVO.getSearchSubjectCode(), ""));
@@ -519,28 +515,6 @@ public class TeacherApi extends CORSFilter {
         jsonObject.put("retMsg", "OK");
 
         return new JSONObject(jsonObject);
-    }
-
-    /**
-     * 파라미터 설정
-     */
-    @SuppressWarnings("unchecked")
-    private void setParam(HashMap<String, String> params, HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-
-        if (session == null) {
-            params.put("USER_ID", "");
-        } else {
-            HashMap<String, String> loginInfo = (HashMap<String, String>) session.getAttribute("userInfo");
-            if (loginInfo != null && !loginInfo.isEmpty()) {
-                params.put("USER_ID", loginInfo.get("USER_ID"));
-            } else {
-                params.put("USER_ID", "");
-            }
-        }
-
-        params.put("topMenuType", CommonUtil.isNull(request.getParameter("topMenuType"), "O"));
-        params.put("topMenu", CommonUtil.isNull(request.getParameter("topMenu"), "001"));
     }
 
 }

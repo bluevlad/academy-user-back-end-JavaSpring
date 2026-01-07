@@ -170,8 +170,7 @@ public class LoginApi extends CORSFilter {
     @Operation(summary = "회원가입", description = "새로운 회원을 등록합니다.")
     @PostMapping("/register")
     public JSONObject register(
-            @ModelAttribute("LoginVO") LoginVO loginVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("LoginVO") LoginVO loginVO) throws Exception {
 
         HashMap<String, Object> jsonObject = new HashMap<>();
 

@@ -7,8 +7,6 @@ import com.academy.board.service.BoardService;
 import com.academy.board.service.BoardVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,12 +40,9 @@ public class BoardApi extends CORSFilter {
     @Operation(summary = "게시판 리스트 조회", description = "게시판 목록을 페이징하여 조회합니다.")
     @GetMapping("/getBoardList")
     public JSONObject getBoardList(
-            @ModelAttribute("BoardVO") BoardVO boardVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardVO") BoardVO boardVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
-
         params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardVO.getBoardMngSeq(), ""));
         params.put("SEARCHTEXT", CommonUtil.isNull(boardVO.getSearchText(), ""));
         params.put("SEARCHKIND", CommonUtil.isNull(boardVO.getSearchKind(), ""));
@@ -84,12 +79,9 @@ public class BoardApi extends CORSFilter {
     @Operation(summary = "게시물 상세 조회", description = "게시물 상세 정보를 조회합니다.")
     @GetMapping("/getBoardView")
     public JSONObject getBoardView(
-            @ModelAttribute("BoardVO") BoardVO boardVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardVO") BoardVO boardVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
-
         params.put("BOARD_SEQ", boardVO.getBoardSeq());
         params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardVO.getBoardMngSeq(), ""));
 
@@ -113,12 +105,9 @@ public class BoardApi extends CORSFilter {
     @Operation(summary = "메인 게시판 리스트 조회", description = "메인 페이지에 표시할 게시판 목록을 조회합니다.")
     @GetMapping("/getMainBoardList")
     public JSONObject getMainBoardList(
-            @ModelAttribute("BoardVO") BoardVO boardVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardVO") BoardVO boardVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
-
         params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardVO.getBoardMngSeq(), "NOTICE_000"));
 
         List<HashMap<String, Object>> resultList = boardService.getMainBoardList(params);
@@ -136,12 +125,9 @@ public class BoardApi extends CORSFilter {
     @Operation(summary = "게시물 등록", description = "새 게시물을 등록합니다.")
     @PostMapping("/insertBoard")
     public JSONObject insertBoard(
-            @ModelAttribute("BoardVO") BoardVO boardVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardVO") BoardVO boardVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
-
         params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardVO.getBoardMngSeq(), ""));
         params.put("BOARD_TITLE", CommonUtil.isNull(boardVO.getBoardTitle(), ""));
         params.put("BOARD_CONTENT", CommonUtil.isNull(boardVO.getBoardContent(), ""));
@@ -165,12 +151,9 @@ public class BoardApi extends CORSFilter {
     @Operation(summary = "게시물 수정", description = "게시물을 수정합니다.")
     @PostMapping("/updateBoard")
     public JSONObject updateBoard(
-            @ModelAttribute("BoardVO") BoardVO boardVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardVO") BoardVO boardVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
-
         params.put("BOARD_SEQ", CommonUtil.isNull(boardVO.getBoardSeq(), ""));
         params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardVO.getBoardMngSeq(), ""));
         params.put("BOARD_TITLE", CommonUtil.isNull(boardVO.getBoardTitle(), ""));
@@ -195,12 +178,9 @@ public class BoardApi extends CORSFilter {
     @Operation(summary = "게시물 삭제", description = "게시물을 삭제합니다.")
     @PostMapping("/deleteBoard")
     public JSONObject deleteBoard(
-            @ModelAttribute("BoardVO") BoardVO boardVO,
-            HttpServletRequest request) throws Exception {
+            @ModelAttribute("BoardVO") BoardVO boardVO) throws Exception {
 
         HashMap<String, String> params = new HashMap<>();
-        setParam(params, request);
-
         params.put("BOARD_SEQ", CommonUtil.isNull(boardVO.getBoardSeq(), ""));
         params.put("BOARD_MNG_SEQ", CommonUtil.isNull(boardVO.getBoardMngSeq(), ""));
 
@@ -215,34 +195,6 @@ public class BoardApi extends CORSFilter {
         }
 
         return new JSONObject(jsonObject);
-    }
-
-    /**
-     * 파라미터 설정
-     */
-    @SuppressWarnings("unchecked")
-    private void setParam(HashMap<String, String> params, HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-
-        if (session == null) {
-            params.put("USER_ID", "");
-            params.put("REG_ID", "");
-            params.put("UPD_ID", "");
-        } else {
-            HashMap<String, String> loginInfo = (HashMap<String, String>) session.getAttribute("userInfo");
-            if (loginInfo != null && !loginInfo.isEmpty()) {
-                params.put("USER_ID", loginInfo.get("USER_ID"));
-                params.put("REG_ID", loginInfo.get("USER_ID"));
-                params.put("UPD_ID", loginInfo.get("USER_ID"));
-            } else {
-                params.put("USER_ID", "");
-                params.put("REG_ID", "");
-                params.put("UPD_ID", "");
-            }
-        }
-
-        params.put("topMenuType", CommonUtil.isNull(request.getParameter("topMenuType"), "F"));
-        params.put("topMenu", CommonUtil.isNull(request.getParameter("topMenu"), "001"));
     }
 
 }
