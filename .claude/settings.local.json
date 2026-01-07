@@ -8,7 +8,9 @@
       "Bash(dir C:jee-2025-09workspacewillbesgosiWebsrcsqlmapmappersoracle /B)",
       "Bash(cmd.exe /c \"dir C:\\jee-2025-09\\workspace\\willbesgosiWeb\\src\\sqlmap\\mappers\\oracle /B 2>nul | findstr /I teacher\")",
       "Bash(cmd.exe /c \"dir C:\\jee-2025-09\\workspace\\willbesgosiWeb\\src\\com\\willbes\\web\\teacher /B 2>nul\")",
-      "Bash(powershell -Command \"(Get-Content TeacherApi.java) -replace '', *HttpServletRequest request\\)'', '')'' -replace ''        setParam\\(params, request\\);'', '''' | Set-Content TeacherApi.java.tmp && Move-Item -Force TeacherApi.java.tmp TeacherApi.java\")"
+      "Bash(powershell -Command \"(Get-Content TeacherApi.java) -replace '', *HttpServletRequest request\\)'', '')'' -replace ''        setParam\\(params, request\\);'', '''' | Set-Content TeacherApi.java.tmp && Move-Item -Force TeacherApi.java.tmp TeacherApi.java\")",
+      "Bash(git pull:*)",
+      "Bash(git fetch:*)"
     ],
     "deny": [],
     "ask": []
