@@ -166,6 +166,7 @@ public class MouigosaApi extends CORSFilter {
     /**
      * 모의고사 답안 저장
      */
+    @SuppressWarnings("unchecked")
     @Operation(summary = "모의고사 답안 저장", description = "모의고사 답안을 저장합니다.")
     @PostMapping("/saveAnswers")
     public JSONObject saveAnswers(@RequestBody HashMap<String, Object> requestBody,
