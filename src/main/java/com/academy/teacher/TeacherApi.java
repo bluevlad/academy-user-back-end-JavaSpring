@@ -300,8 +300,6 @@ public class TeacherApi extends CORSFilter {
     public JSONObject clearCart(
             @ModelAttribute("TeacherVO") TeacherVO teacherVO) throws Exception {
 
-        HashMap<String, String> params = new HashMap<>();
-
         HashMap<String, Object> jsonObject = new HashMap<>();
 
         String userId = teacherVO.getUserId();

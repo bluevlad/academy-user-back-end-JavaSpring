@@ -2,7 +2,6 @@ package com.academy.mocktest.offerer;
 
 import com.academy.common.CORSFilter;
 import com.academy.common.PaginationInfo;
-import com.academy.mocktest.mouigosa.service.MouigosaService;
 import com.academy.mocktest.offerer.service.OffererService;
 import com.academy.mocktest.offerer.service.OffererVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -21,12 +20,10 @@ import java.util.List;
 public class OffererApi extends CORSFilter {
 
     private final OffererService offererService;
-    private final MouigosaService mouigosaService;
 
     @Autowired
-    public OffererApi(OffererService offererService, MouigosaService mouigosaService) {
+    public OffererApi(OffererService offererService) {
         this.offererService = offererService;
-        this.mouigosaService = mouigosaService;
     }
 
     /**
@@ -198,7 +195,7 @@ public class OffererApi extends CORSFilter {
                 params.put("IDENTYID", identyId);
                 params.put("MOCKCODE", mockCode);
 
-                int result = offererService.offererDeletes(params);
+                offererService.offererDeletes(params);
 
                 jsonObject.put("retMsg", "OK");
                 jsonObject.put("message", "삭제되었습니다.");

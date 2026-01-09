@@ -5,7 +5,6 @@ import com.academy.common.CORSFilter;
 import com.academy.common.PaginationInfo;
 import com.academy.lecture.packagelecture.service.PackageLectureService;
 import com.academy.lecture.packagelecture.service.PackageLectureVO;
-import com.academy.lecture.service.LectureService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,12 +30,10 @@ public class PackageLectureApi extends CORSFilter {
     private int pageUnit;
 
     private final PackageLectureService packageLectureService;
-    private final LectureService lectureService;
 
     @Autowired
-    public PackageLectureApi(PackageLectureService packageLectureService, LectureService lectureService) {
+    public PackageLectureApi(PackageLectureService packageLectureService) {
         this.packageLectureService = packageLectureService;
-        this.lectureService = lectureService;
     }
 
     /**

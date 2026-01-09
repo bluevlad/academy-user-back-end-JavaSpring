@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 
@@ -128,15 +127,6 @@ public class MouigosaApi extends CORSFilter {
 
             String tcounter = mouigosaVO.getTcounter();
             if (tcounter == null || tcounter.equals("")) {
-                // 시험 시작 시간 체크
-                Calendar cal = Calendar.getInstance();
-                String currTime = String.format("%04d%02d%02d%02d%02d",
-                        cal.get(Calendar.YEAR),
-                        (cal.get(Calendar.MONTH) + 1),
-                        cal.get(Calendar.DAY_OF_MONTH),
-                        cal.get(Calendar.HOUR_OF_DAY),
-                        cal.get(Calendar.MINUTE));
-
                 // 답안 초기화
                 HashMap<String, Object> params2 = new HashMap<>();
                 params2.put("QUESTIONNUMBER", "1");

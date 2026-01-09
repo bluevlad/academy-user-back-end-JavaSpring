@@ -1,7 +1,6 @@
 package com.academy.mypage.cart;
 
 import com.academy.common.CORSFilter;
-import com.academy.common.PaginationInfo;
 import com.academy.mypage.cart.service.MypageCartService;
 import com.academy.mypage.cart.service.MypageCartVO;
 import io.swagger.v3.oas.annotations.Operation;

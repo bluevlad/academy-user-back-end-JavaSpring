@@ -5,7 +5,6 @@ import com.academy.common.CORSFilter;
 import com.academy.pay.service.PayService;
 import com.academy.pay.service.PayVO;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
