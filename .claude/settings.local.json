@@ -1,18 +1,30 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dir \"C:\\jee-2025-09\\workspace\\willbesgosiWeb\\src\\com\\willbes\\web\" /S /B)",
-      "Bash(findstr:*)",
-      "Bash(cmd.exe /c \"dir C:\\jee-2025-09\\workspace\\willbesgosiWeb\\src\\com\\willbes\\web\\mocktest /S /B 2>nul\")",
-      "Bash(dir \"C:\\jee-2025-09\\workspace\\willbesgosiWeb\\src\\com\\willbes\\web\\teacher\" /B)",
-      "Bash(dir C:jee-2025-09workspacewillbesgosiWebsrcsqlmapmappersoracle /B)",
-      "Bash(cmd.exe /c \"dir C:\\jee-2025-09\\workspace\\willbesgosiWeb\\src\\sqlmap\\mappers\\oracle /B 2>nul | findstr /I teacher\")",
-      "Bash(cmd.exe /c \"dir C:\\jee-2025-09\\workspace\\willbesgosiWeb\\src\\com\\willbes\\web\\teacher /B 2>nul\")",
-      "Bash(powershell -Command \"(Get-Content TeacherApi.java) -replace '', *HttpServletRequest request\\)'', '')'' -replace ''        setParam\\(params, request\\);'', '''' | Set-Content TeacherApi.java.tmp && Move-Item -Force TeacherApi.java.tmp TeacherApi.java\")",
-      "Bash(git pull:*)",
-      "Bash(git fetch:*)"
-    ],
-    "deny": [],
-    "ask": []
+      "Bash(git *)",
+      "Bash(mvn *)",
+      "Bash(npm *)",
+      "Bash(docker *)",
+      "Bash(cd *)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(powershell *)",
+      "Bash(cmd *)",
+      "Bash(dir *)",
+      "Bash(findstr *)",
+      "Bash(curl *)",
+      "Bash(java *)",
+      "Bash(where *)",
+      "Bash(reg *)",
+      "Bash(netstat *)",
+      "Bash(tasklist *)",
+      "Bash(file *)",
+      "Bash(pip *)",
+      "Bash(npx *)",
+      "Bash(code *)",
+      "Bash(schtasks *)",
+      "Bash(./mvnw *)",
+      "Bash(.\\mvnw *)"
+    ]
   }
 }
