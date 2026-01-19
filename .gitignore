@@ -43,3 +43,6 @@ CLAUDE.local.md
 ### Windows reserved names ###
 nul
 log*.txt
+
+### Docker ###
+docker-compose.yml
