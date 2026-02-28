@@ -401,12 +401,3 @@ If port 8080 is in use:
 If you see compilation errors with `\ufeff`:
 - Re-save files as UTF-8 without BOM
 
-## License
-
-This project is proprietary software.
-
----
-
-## Copyright
-
-**Copyright (c) 2021 운몽시스템즈(UM Systems). All rights reserved.**
