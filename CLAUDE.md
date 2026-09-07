@@ -343,7 +343,7 @@ JWT_SECRET=your_jwt_secret_here
 
 ## Fix 커밋 오류 추적
 
-> 상세: [FIX_COMMIT_TRACKING_GUIDE.md](https://github.com/bluevlad/Claude-Opus-bluevlad/blob/main/standards/git/FIX_COMMIT_TRACKING_GUIDE.md) | [ERROR_TAXONOMY.md](https://github.com/bluevlad/Claude-Opus-bluevlad/blob/main/standards/git/ERROR_TAXONOMY.md)
+> 상세: [FIX_COMMIT_TRACKING_GUIDE.md](https://github.com/bluevlad/Ai-Legacy-bluevlad/blob/main/standards/git/FIX_COMMIT_TRACKING_GUIDE.md) | [ERROR_TAXONOMY.md](https://github.com/bluevlad/Ai-Legacy-bluevlad/blob/main/standards/git/ERROR_TAXONOMY.md)
 
 `fix:` 커밋 시 footer에 오류 추적 메타데이터를 **필수** 포함합니다.
 
